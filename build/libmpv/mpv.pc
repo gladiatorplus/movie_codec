@@ -1,0 +1,12 @@
+prefix=/usr/local
+exec_prefix=/usr/local
+libdir=/usr/local/lib
+includedir=/usr/local/include
+
+Name: mpv
+Description: mpv media player client library
+Version: 1.101.0
+Requires:
+Libs: -L${libdir} -lmpv
+Libs.private: -lcaca -ldrm -ldvdnav -lpthread -ldvdread -larchive -lass -lavutil -lavformat -lswscale -lavfilter -lswresample -lavcodec -lavdevice -lbluray -ldl -lm -lrt -lpulse -lEGL -lGLESv2 -lvulkan -lz
+Cflags: -I${includedir}

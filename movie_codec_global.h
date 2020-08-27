@@ -1,0 +1,12 @@
+#ifndef MOVIE_CODEC_GLOBAL_H
+#define MOVIE_CODEC_GLOBAL_H
+
+//#include <QtCore/qglobal.h>
+
+#if defined(MOVIE_CODEC_LIBRARY)
+#  define MOVIE_CODECSHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define MOVIE_CODECSHARED_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // MOVIE_CODEC_GLOBAL_H
