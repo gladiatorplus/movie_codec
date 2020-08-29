@@ -123,7 +123,7 @@ struct vo_internal {
 
     bool hasframe;
     bool hasframe_rendered;
-    bool request_redraw;            // redraw request from player to VO
+    bool request_redraw;            // redraw request from player to VO 从播放器到VO的重画请求
     bool want_redraw;               // redraw request from VO to player
     bool send_reset;                // send VOCTRL_RESET
     bool paused;
@@ -146,16 +146,16 @@ struct vo_internal {
     bool expecting_vsync;
     int64_t num_successive_vsyncs;
 
-    int64_t flip_queue_offset; // queue flip events at most this much in advance
+    int64_t flip_queue_offset; // queue flip events at most this much in advance最多提前这么多时间排队翻转事件
     int64_t timing_offset;     // same (but from options; not VO configured)
 
     int64_t delayed_count;
     int64_t drop_count;
     bool dropped_frame;             // the previous frame was dropped
 
-    struct vo_frame *current_frame; // last frame queued to the VO
+    struct vo_frame *current_frame; // last frame queued to the VO 排队到VO的最后一帧
 
-    int64_t wakeup_pts;             // time at which to pull frame from decoder
+    int64_t wakeup_pts;             // time at which to pull frame from decoder 从解码器中提取帧的时间
 
     bool rendering;                 // true if an image is being rendered
     struct vo_frame *frame_queued;  // should be drawn next
@@ -338,6 +338,7 @@ struct vo *init_best_video_out(struct mpv_global *global, struct vo_extra *ex)
 {
     struct m_obj_settings *vo_list = global->opts->vo->video_driver_list;
     // first try the preferred drivers, with their optional subdevice param:
+	//首先尝试首选的驱动程序及其可选子设备参数：
     if (vo_list && vo_list[0].name) {
         for (int n = 0; vo_list[n].name; n++) {
             // Something like "-vo name," allows fallback to autoprobing.
@@ -379,6 +380,7 @@ void vo_destroy(struct vo *vo)
 }
 
 // Wakeup the playloop to queue new video frames etc.
+//循环播放帧等。
 static void wakeup_core(struct vo *vo)
 {
     vo->extra.wakeup_cb(vo->extra.wakeup_ctx);
@@ -386,6 +388,8 @@ static void wakeup_core(struct vo *vo)
 
 // Drop timing information on discontinuities like seeking.
 // Always called locked.
+//在不连续性上删除时间信息，如seek。
+//总是被称为锁定。
 static void reset_vsync_timings(struct vo *vo)
 {
     struct vo_internal *in = vo->in;
@@ -411,6 +415,8 @@ static double vsync_stddef(struct vo *vo, int64_t ref_vsync)
 // Check if we should switch to measured average display FPS if it seems
 // "better" then the system-reported one. (Note that small differences are
 // handled as drift instead.)
+//检查我们是否应该切换到测量的平均显示FPS，如果它看起来比系统报告的“更好”。
+//（请注意，小的差异被当作漂移处理。）
 static void check_estimated_display_fps(struct vo *vo)
 {
     struct vo_internal *in = vo->in;
@@ -446,6 +452,8 @@ static void check_estimated_display_fps(struct vo *vo)
 
 // Attempt to detect vsyncs delayed/skipped by the driver. This tries to deal
 // with strong jitter too, because some drivers have crap vsync timing.
+//尝试检测驱动程序延迟/跳过的vSync。这也试图处理强抖动，
+//因为有些驱动程序有糟糕的vsync定时。
 static void vsync_skip_detection(struct vo *vo)
 {
     struct vo_internal *in = vo->in;
@@ -466,6 +474,8 @@ static void vsync_skip_detection(struct vo *vo)
         // Assume a drop. An underflow can technically speaking not be a drop
         // (it's up to the driver what this is supposed to mean), but no reason
         // to treat it differently.
+		//假设一滴。从技术上讲，下溢不是下降（这取决于驱动器的意思），
+		//但没有理由区别对待。
         in->base_vsync = in->prev_vsync;
         in->delayed_count += 1;
         in->drop_point = 0;
@@ -651,6 +661,7 @@ int vo_control(struct vo *vo, int request, void *data)
 }
 
 // Run vo_control() without waiting for a reply.
+//运行vo_control()而不等待答复。
 // (Only works for some VOCTRLs.)
 void vo_control_async(struct vo *vo, int request, void *data)
 {
@@ -692,6 +703,8 @@ static void forget_frames(struct vo *vo)
 // VOs which have no special requirements on UI event loops etc. can set the
 // vo_driver.wait_events callback to this (and leave vo_driver.wakeup unset).
 // This function must not be used or called for other purposes.
+//对UI事件循环等没有特殊要求的vo可以设置vo_driver.wait_events回调到此（并离开 vo_driver。唤醒未设置）。
+//此函数不得用于或调用用于其他目的。
 void vo_wait_default(struct vo *vo, int64_t until_time)
 {
     struct vo_internal *in = vo->in;
@@ -748,6 +761,9 @@ void vo_wakeup(struct vo *vo)
 // callback once the time is right.
 // If next_pts is negative, disable any timing and draw the frame as fast as
 // possible.
+//是否可以调用vo_queue_frame（）。如果VO还没有准备好，函数将返回false，并且VO将在准备好后调用wakeup回调。
+//next_pts是显示下一帧的确切时间。如果VO已经准备好，但时间太早，则返回false，并在时间合适时调用wakeup回调。
+//如果next_pts为负数，则禁用任何计时并尽快绘制帧。
 bool vo_is_ready_for_frame(struct vo *vo, int64_t next_pts)
 {
     struct vo_internal *in = vo->in;
@@ -761,6 +777,8 @@ bool vo_is_ready_for_frame(struct vo *vo, int64_t next_pts)
         // display by disallowing OSD redrawing or VO interaction.
         // Actually render the frame at earliest the given offset before target
         // time.
+		//不要过早地显示帧-它会通过禁止OSD重画或VO交互来冻结显示。
+		//实际上，最早在目标时间之前以给定的偏移量渲染帧。
         next_pts -= in->timing_offset;
         next_pts -= in->flip_queue_offset;
         int64_t now = mp_time_us();
@@ -780,6 +798,9 @@ bool vo_is_ready_for_frame(struct vo *vo, int64_t next_pts)
 // Direct the VO thread to put the currently queued image on the screen.
 // vo_is_ready_for_frame() must have returned true before this call.
 // Ownership of frame is handed to the vo.
+//指示VO线程将当前排队的图像放在屏幕上。
+//vo_is_ready_for_frame（）必须在此调用之前返回true。
+//帧的所有权交给vo。
 void vo_queue_frame(struct vo *vo, struct vo_frame *frame)
 {
     struct vo_internal *in = vo->in;
@@ -797,6 +818,8 @@ void vo_queue_frame(struct vo *vo, struct vo_frame *frame)
 
 // If a frame is currently being rendered (or queued), wait until it's done.
 // Otherwise, return immediately.
+//如果帧当前正在渲染（或排队），请等到它完成。
+//否则，请立即返回。
 void vo_wait_frame(struct vo *vo)
 {
     struct vo_internal *in = vo->in;
@@ -1137,6 +1160,7 @@ void vo_increment_drop_count(struct vo *vo, int64_t n)
 }
 
 // Make the VO redraw the OSD at some point in the future.
+//让VO在将来的某个时候重新绘制OSD。
 void vo_redraw(struct vo *vo)
 {
     struct vo_internal *in = vo->in;
@@ -1171,6 +1195,8 @@ void vo_seek_reset(struct vo *vo)
 
 // Return true if there is still a frame being displayed (or queued).
 // If this returns true, a wakeup some time in the future is guaranteed.
+//如果仍有帧正在显示（或排队），则返回true。
+//如果返回true，则保证在未来某个时间唤醒。
 bool vo_still_displaying(struct vo *vo)
 {
     struct vo_internal *in = vo->in;
@@ -1188,6 +1214,7 @@ bool vo_still_displaying(struct vo *vo)
 }
 
 // Whether at least 1 frame was queued or rendered since last seek or reconfig.
+//自上次搜索或重新配置后是否至少有1帧已排队或呈现。
 bool vo_has_frame(struct vo *vo)
 {
     return vo->in->hasframe;
@@ -1203,7 +1230,7 @@ static void run_query_format(void *p)
 }
 
 // For each item in the list (allocated as uint8_t[IMGFMT_END - IMGFMT_START]),
-// set the supported format flags.
+// set the supported format flags.设置支持的标志格式。
 void vo_query_formats(struct vo *vo, uint8_t *list)
 {
     void *p[] = {vo, list};
@@ -1216,6 +1243,10 @@ void vo_query_formats(struct vo *vo, uint8_t *list)
 // out_dst: area of screen covered by the video source rectangle
 // out_osd: OSD size, OSD margins, etc.
 // Must be called from the VO thread only.
+//计算适当的源矩形和目标矩形，以获得正确缩放的图片，包括平移扫描。out_src：视频的可见部分
+//out_dst：视频源矩形覆盖的屏幕区域
+//输出osd：osd大小、osd边距等。
+//必须仅从VO线程调用。
     void vo_get_src_dst_rects(struct vo *vo, struct mp_rect *out_src,
                             struct mp_rect *out_dst, struct mp_osd_res *out_osd)
 {
@@ -1233,6 +1264,10 @@ void vo_query_formats(struct vo *vo, uint8_t *list)
 // (For vo_vdpau, which does its own timing.)
 // num_req_frames set the requested number of requested vo_frame.frames.
 // (For vo_gpu interpolation.)
+	//翻页将被称为偏移微秒太早。
+//（对于vo_vdpau，它自己计时。）
+//num_req_frames设置请求的vo_frame.帧数。
+//（用于vo_gpu插值
 void vo_set_queue_params(struct vo *vo, int64_t offset_us, int num_req_frames)
 {
     struct vo_internal *in = vo->in;
@@ -1285,6 +1320,9 @@ double vo_get_estimated_vsync_jitter(struct vo *vo)
 // This can only be called while no new frame is queued (after
 // vo_is_ready_for_frame). Returns 0 for non-display synced frames, or if the
 // deadline for continuous display was missed.
+//获取当前渲染帧结束的时间（以秒为单位）。如果帧尚未完成，则返回正值；如果帧已完成，则返回负值。
+//这只能在没有新帧排队的情况下调用（在vo_is_ready_for_frame之后）。
+//对于非显示同步帧，或如果错过了连续显示的截止时间，则返回0。
 double vo_get_delay(struct vo *vo)
 {
     struct vo_internal *in = vo->in;
@@ -1345,6 +1383,7 @@ void vo_event(struct vo *vo, int event)
 
 // Check event flags set with vo_event(). Return the mask of events that was
 // set and included in the events parameter. Clear the returned events.
+//检查用vo_event()设置的事件标志。返回事件参数中设置并包含的事件掩码。清除返回的事件。
 int vo_query_and_reset_events(struct vo *vo, int events)
 {
     struct vo_internal *in = vo->in;
@@ -1395,6 +1434,8 @@ static void destroy_frame(void *p)
 // Return a new reference to the given frame. The image pointers are also new
 // references. Calling talloc_free() on the frame unrefs all currently set
 // image references. (Assuming current==frames[0].)
+//返回对给定帧的新引用。图像指针也是新的引用。对帧调用talloc_free（）将取消当前设置的所有图像引用。
+//（假设current==帧[0]。）
 struct vo_frame *vo_frame_ref(struct vo_frame *frame)
 {
     if (!frame)
