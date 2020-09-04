@@ -41,6 +41,12 @@
  *   render API user anyway, and the (unlikely) deadlock is avoided with
  *   a timeout
  *
+ * mpv_render_上下文由主机应用程序管理-主机应用程序可以随时访问它，即使VO已被销毁（或尚未创建）。
+    *
+    *-libmpv用户可以混合render API和normal API；因此render API函数可以在内核上等待，但不能反过来
+    *-内核会阻塞对VO线程的调用，因此VO函数不能等待用户调用API函数
+    *-为了使视频计时正常工作，VO线程无论如何都会等待render API用户，并通过超时来避免（不太可能的）死锁
+ *
  *  Locking:  mpv core > VO > mpv_render_context.lock > mp_client_api.lock
  *              > mpv_render_context.update_lock
  *  And: render thread > VO (wait for present)
@@ -74,15 +80,15 @@ struct mpv_render_context {
     // --- Protected by update_lock
     mpv_render_update_fn update_cb;
     void *update_cb_ctx;
-    bool had_kill_update;           // update during termination
+    bool had_kill_update;           // update during termination 终止期间更新
 
     pthread_mutex_t lock;
     pthread_cond_t video_wait;      // paired with lock
 
     // --- Protected by lock
     struct vo_frame *next_frame;    // next frame to draw
-    int64_t present_count;          // incremented when next frame can be shown
-    int64_t expected_flip_count;    // next vsync event for next_frame
+    int64_t present_count;          // incremented when next frame can be shown  显示下一帧时递增
+    int64_t expected_flip_count;    // next vsync event for next_frame 下一帧的下一个vsync事件
     bool redrawing;                 // next_frame was a redraw request
     int64_t flip_count;
     struct vo_frame *cur_frame;
@@ -96,11 +102,12 @@ struct mpv_render_context {
     bool need_update_external;
     struct vo *vo;
 
-    // --- Mostly immutable after init.
+    // --- Mostly immutable after init.在init之后大部分是不可变的
     struct mp_hwdec_devices *hwdec_devs;
 
     // --- All of these can only be accessed from mpv_render_*() API, for
     //     which the user makes sure they're called synchronized.
+    //---所有这些只能从mpv_render_*（）API访问，用户要确保它们被称为synchronized。
     struct render_backend *renderer;
     struct m_config_cache *vo_opts_cache;
     struct mp_vo_opts *vo_opts;
@@ -262,12 +269,15 @@ void mpv_render_context_free(mpv_render_context *ctx)
 
     // From here on, ctx becomes invisible and cannot be newly acquired. Only
     // a VO could still hold a reference.
+    //从现在起，ctx变得不可见，不能新acquired。只有一个VO仍然可以保存引用。
     mp_set_main_render_context(ctx->client_api, ctx, false);
 
     // If it's still in use, a VO using it must be active. Destroy the VO, and
     // also bring down the decoder etc., which still might be using the hwdec
     // context. The above removal guarantees it can't come back (so ctx->vo
     // can't change to non-NULL).
+    //如果它仍在使用中，使用它的VO必须处于活动状态。销毁VO，并关闭解码器等，它们可能仍在使用hwdec上下文。
+    //上面的删除保证了它不能返回（所以ctx->vo不能更改为非NULL）。
     if (atomic_load(&ctx->in_use)) {
         kill_video_async(ctx->client_api, kill_cb, ctx);
 
@@ -276,6 +286,8 @@ void mpv_render_context_free(mpv_render_context *ctx)
             // try to allocate new DR images and so on. This is a grotesque
             // corner case, but possible. Also, more likely, DR images need to
             // be released while the video chain is destroyed.
+            //只要视频解码器没有被破坏，他们仍然可以尝试分配新的DR图像等等。这是一个奇怪的角落案件，
+            //但可能。另外，更有可能的是，DR图像需要在视频链被破坏的同时发布
             if (ctx->dispatch)
                 mp_dispatch_queue_process(ctx->dispatch, 0);
 
@@ -291,7 +303,7 @@ void mpv_render_context_free(mpv_render_context *ctx)
     assert(!atomic_load(&ctx->in_use));
     assert(!ctx->vo);
 
-    // Possibly remaining outstanding work.
+    // Possibly remaining outstanding work.//可能还未完成的工作。
     if (ctx->dispatch)
         mp_dispatch_queue_process(ctx->dispatch, 0);
 
@@ -315,6 +327,8 @@ void mpv_render_context_free(mpv_render_context *ctx)
 // Try to mark the context as "in exclusive use" (e.g. by a VO).
 // Note: the function must not acquire any locks, because it's called with an
 // external leaf lock held.
+//尝试将上下文标记为“独占使用”（例如由VO）。
+//注意：函数不能获取任何锁，因为它是在保持外部叶锁的情况下调用的。
 bool mp_render_context_acquire(mpv_render_context *ctx)
 {
     bool prev = false;
@@ -516,9 +530,11 @@ static void flip_page(struct vo *vo)
         goto done; // do not block for redrawing
 
     // Wait until frame was presented
+    //等待出现帧
     while (ctx->expected_flip_count > ctx->flip_count) {
         // mpv_render_report_swap() is declared as optional API.
         // Assume the user calls it consistently _if_ it's called at all.
+        //假设用户一直在调用它（如果它被调用的话）。
         if (!ctx->flip_count)
             break;
         if (pthread_cond_timedwait(&ctx->video_wait, &ctx->lock, &ts)) {
@@ -530,6 +546,7 @@ static void flip_page(struct vo *vo)
 done:
 
     // Cleanup after the API user is not reacting, or is being unusually slow.
+    //API用户没有反应或异常缓慢后进行清理。
     if (ctx->next_frame) {
         talloc_free(ctx->cur_frame);
         ctx->cur_frame = ctx->next_frame;
@@ -612,6 +629,7 @@ static int control(struct vo *vo, uint32_t request, void *data)
     }
 
     // VOCTRLs to be run on the renderer thread (if possible at all).
+    //要在渲染器线程上运行的VOCTRLs（如果可能的话）。
     switch (request) {
     case VOCTRL_SCREENSHOT:
         if (ctx->dispatch) {
