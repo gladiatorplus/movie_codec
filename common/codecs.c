@@ -34,6 +34,8 @@ void mp_add_decoder(struct mp_decoder_list *list, const char *codec,
 
 // Add entry, but only if it's not yet on the list, and if the codec matches.
 // If codec == NULL, don't compare codecs.
+//添加条目，但前提是它还不在列表中，并且编解码器匹配。
+//如果codec==NULL，则不要比较编解码器。
 static void add_new(struct mp_decoder_list *to, struct mp_decoder_entry *entry,
                     const char *codec)
 {
@@ -48,11 +50,15 @@ static void add_new(struct mp_decoder_list *to, struct mp_decoder_entry *entry,
 // This returns a list of decoders to try, with the preferred decoders first.
 // The selection string corresponds to --vd/--ad directly, and has the
 // following syntax:
+//从给定的编解码器列表中选择一个解码器。选择可以受选择字符串的影响，选择字符串可以指定首选解码器的优先级列表。
+//这将返回要尝试的解码器列表，首先是首选解码器。
+//选择字符串直接对应于--vd/--ad，语法如下：
 //   selection = [<entry> ("," <entry>)*]
 //       entry = <decoder>       // prefer decoder
 //       entry = "-" <decoder>   // exclude a decoder
 //       entry = "-"                            // don't add fallback decoders
 // Forcing a decoder means it's added even if the codec mismatches.
+//强制解码器意味着即使编解码器不匹配，也会添加解码器。
 struct mp_decoder_list *mp_select_decoders(struct mp_log *log,
                                            struct mp_decoder_list *all,
                                            const char *codec,
@@ -79,6 +85,7 @@ struct mp_decoder_list *mp_select_decoders(struct mp_log *log,
     }
     if (!stop) {
         // Add the remaining codecs which haven't been added yet
+        //添加尚未添加的其余编解码器
         for (int n = 0; n < all->num_entries; n++)
             add_new(list, &all->entries[n], codec);
     }

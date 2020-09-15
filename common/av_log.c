@@ -56,6 +56,7 @@
 
 // Needed because the av_log callback does not provide a library-safe message
 // callback.
+//需要此选项，因为av_log回调不提供库安全消息回调。
 static pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct mpv_global *log_mpv_instance;
 static struct mp_log *log_root, *log_decaudio, *log_decvideo, *log_demuxer;

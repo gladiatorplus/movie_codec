@@ -103,6 +103,7 @@ void mp_rect_union(struct mp_rect *rc, const struct mp_rect *rc2)
 }
 
 // Returns whether or not a point is contained by rc
+//返回rc是否包含点
 bool mp_rect_contains(struct mp_rect *rc, int x, int y)
 {
     return rc->x0 <= x && x < rc->x1 && rc->y0 <= y && y < rc->y1;
@@ -110,6 +111,8 @@ bool mp_rect_contains(struct mp_rect *rc, int x, int y)
 
 // Set rc to the intersection of rc and src.
 // Return false if the result is empty.
+//将rc设置为rc和src的交点。
+//如果结果为空，则返回false。
 bool mp_rect_intersection(struct mp_rect *rc, const struct mp_rect *rc2)
 {
     rc->x0 = FFMAX(rc->x0, rc2->x0);
@@ -130,6 +133,8 @@ bool mp_rect_equals(struct mp_rect *rc1, struct mp_rect *rc2)
 // character to str[strlen(str)]. This returns the number of characters the
 // string would have *appended* assuming a large enough buffer, will make sure
 // str is null-terminated, and will never write to str[size] or past.
+//它的工作原理与snprintf（）类似，只是它开始将第一个输出字符写入str[strlen（str）]。
+//如果缓冲区足够大，则返回字符串*附加*的字符数，确保str以null结尾，并且不会写入str[size]或pass。
 // Example:
 //  int example(char *buf, size_t buf_size, double num, char *str) {
 //      int n = 0;
@@ -137,6 +142,7 @@ bool mp_rect_equals(struct mp_rect *rc1, struct mp_rect *rc2)
 //      n += mp_snprintf_cat(buf, size, "%s", str);
 //      return n; }
 // Note how this can be chained with functions similar in style.
+//注意如何用风格相似的函数来链接它。
 int mp_snprintf_cat(char *str, size_t size, const char *format, ...)
 {
     size_t len = strnlen(str, size);
@@ -152,6 +158,8 @@ int mp_snprintf_cat(char *str, size_t size, const char *format, ...)
 // Encode the unicode codepoint as UTF-8, and append to the end of the
 // talloc'ed buffer. All guarantees bstr_xappend() give applies, such as
 // implicit \0-termination for convenience.
+//将unicode码位编码为UTF-8，并附加到talloc'ed缓冲区的末尾。
+//bstr_xappend（）提供的所有保证都适用，例如为方便起见，隐式终止。
 void mp_append_utf8_bstr(void *talloc_ctx, struct bstr *buf, uint32_t codepoint)
 {
     char data[8];
@@ -166,6 +174,9 @@ void mp_append_utf8_bstr(void *talloc_ctx, struct bstr *buf, uint32_t codepoint)
 // after the initial '\', and after parsing *code is set to the first character
 // after the current escape.
 // On error, false is returned, and all input remains unchanged.
+//解析从代码开始的C/JSON样式转义，并使用talloc将结果附加到*str。
+//输入字符串（*code）必须指向首字母“\”后的第一个字符，解析后*代码将设置为当前转义后的第一个字符。
+//出错时，返回false，所有输入保持不变。
 static bool mp_parse_escape(void *talloc_ctx, bstr *dst, bstr *code)
 {
     if (code->len < 1)
@@ -223,6 +234,8 @@ static bool mp_parse_escape(void *talloc_ctx, bstr *dst, bstr *code)
 // Like mp_append_escaped_string, but set *dst to sliced *src if no escape
 // sequences have to be parsed (i.e. no memory allocation is required), and
 // if dst->start was NULL on function entry.
+//像mp_append_escaped_escaped_string一样，但是如果不需要解析转义序列（即不需要内存分配），
+//并且如果函数入口的dst->start为空，则将*dst设置为sliced*src。
 bool mp_append_escaped_string_noalloc(void *talloc_ctx, bstr *dst, bstr *src)
 {
     bstr t = *src;
@@ -261,6 +274,12 @@ error:
 // Note that dst->start will be implicitly \0-terminated on successful return,
 // and if it was NULL or \0-terminated before calling the function.
 // As mentioned above, the caller is responsible for skipping the '"' chars.
+//src应该指向一个C样式的字符串文本，*src指向起始“”后面的第一个字符。它将把文本的内容追加到*dst（使用talloc_ctx），直到找到第一个''或*str的结尾。
+//请参见bstr_xappend（）如何将数据附加到*dst。
+//如果成功，*src将以''开头，或者为空。
+//出现错误时，返回false，*dst将包含字符串，直到第一个错误，*src不会更改。
+//请注意，dst->start将在成功返回时隐式终止，如果它为NULL或在调用函数之前终止。
+//如上所述，调用方负责跳过“”字符。
 bool mp_append_escaped_string(void *talloc_ctx, bstr *dst, bstr *src)
 {
     if (mp_append_escaped_string_noalloc(talloc_ctx, dst, src)) {

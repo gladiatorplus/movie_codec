@@ -70,6 +70,7 @@ AVCodecParameters *mp_codec_params_to_av(struct mp_codec_params *c)
         return NULL;
 
     // If we have lavf demuxer params, they overwrite by definition any others.
+    //如果我们有lavf demuxer参数，它们会根据定义覆盖任何其他参数。
     if (c->lav_codecpar) {
         if (avcodec_parameters_copy(avp, c->lav_codecpar) < 0)
             goto error;
@@ -108,6 +109,7 @@ error:
 }
 
 // Set avctx codec headers for decoding. Returns <0 on failure.
+//为解码设置avctx编解码器头。失败时返回<0。
 int mp_set_avctx_codec_headers(AVCodecContext *avctx, struct mp_codec_params *c)
 {
     enum AVMediaType codec_type = avctx->codec_type;
@@ -128,6 +130,7 @@ int mp_set_avctx_codec_headers(AVCodecContext *avctx, struct mp_codec_params *c)
 
 // Pick a "good" timebase, which will be used to convert double timestamps
 // back to fractions for passing them through libavcodec.
+//选择一个“好的”时基，它将用于将双时间戳转换回分数，以便通过libavcodec传递它们。
 AVRational mp_get_codec_timebase(struct mp_codec_params *c)
 {
     AVRational tb = {c->native_tb_num, c->native_tb_den};
@@ -140,6 +143,7 @@ AVRational mp_get_codec_timebase(struct mp_codec_params *c)
 
     // If the timebase is too coarse, raise its precision, or small adjustments
     // to timestamps done between decoder and demuxer could be lost.
+    //如果时基太粗糙，请提高其精度，否则对解码器和解复用器之间的时间戳所做的小调整可能会丢失。
     if (av_q2d(tb) > 0.001) {
         AVRational r = av_div_q(tb, (AVRational){1, 1000});
         tb.den *= (r.num + r.den - 1) / r.den;
@@ -160,6 +164,7 @@ static AVRational get_def_tb(AVRational *tb)
 
 // Convert the mpv style timestamp (seconds as double) to a libavcodec style
 // timestamp (integer units in a given timebase).
+//将mpv样式的时间戳（秒作为double）转换为libavcodec样式的时间戳（给定时基中的整数单位）。
 int64_t mp_pts_to_av(double mp_pts, AVRational *tb)
 {
     AVRational b = get_def_tb(tb);
@@ -177,6 +182,8 @@ double mp_pts_from_av(int64_t av_pts, AVRational *tb)
 // mpkt can be NULL to generate empty packets (used to flush delayed data).
 // Sets pts/dts using mp_pts_to_av(ts, tb). (Be aware of the implications.)
 // Set duration field only if tb is set.
+//从mpkt设置dst。请注意，dst不可引用。mpkt可以为NULL以生成空数据包（用于刷新延迟的数据）。
+//使用mp_pts_to_av（ts，tb）设置pts/dts。（请注意其中的含义。）仅当设置了tb时才设置duration字段。
 void mp_set_av_packet(AVPacket *dst, struct demux_packet *mpkt, AVRational *tb)
 {
     av_init_packet(dst);
@@ -209,10 +216,11 @@ void mp_set_avcodec_threads(struct mp_log *l, AVCodecContext *avctx, int threads
         } else {
             mp_verbose(l, "Detected %d logical cores.\n", threads);
             if (threads > 1)
-                threads += 1; // extra thread for better load balancing
+                threads += 1; // extra thread for better load balancing 额外的线程以实现更好的负载平衡
         }
         // Apparently some libavcodec versions have or had trouble with more
         // than 16 threads, and/or print a warning when using > 16.
+        //显然，有些libavcodec版本有超过16个线程的问题，和/或在使用>16时打印警告。
         threads = MPMIN(threads, 16);
     }
     mp_verbose(l, "Requesting %d threads for decoding.\n", threads);
@@ -242,6 +250,7 @@ void mp_add_lavc_decoders(struct mp_decoder_list *list, enum AVMediaType type)
 }
 
 // (Abuses the decoder list data structures.)
+//滥用解码器列表数据结构
 void mp_add_lavc_encoders(struct mp_decoder_list *list)
 {
     add_codecs(list, AVMEDIA_TYPE_UNKNOWN, false);
@@ -302,6 +311,7 @@ void mp_set_avdict(AVDictionary **dict, char **kv)
 
 // For use with libav* APIs that take AVDictionaries of options.
 // Print options remaining in the dict as unset.
+//打印dict中未设置的选项。
 void mp_avdict_print_unset(struct mp_log *log, int msgl, AVDictionary *dict)
 {
     AVDictionaryEntry *t = NULL;
@@ -328,6 +338,7 @@ static void resolve_positional_arg(void *avobj, char **name)
         if (!opt)
             return;
         // This is what libavfilter's parser does to skip aliases.
+        //这就是libavfilter的解析器所做的来跳过别名。
         if (opt->offset != offset && opt->type != AV_OPT_TYPE_CONST)
             pos--;
         if (pos < 0) {
@@ -343,6 +354,9 @@ static void resolve_positional_arg(void *avobj, char **name)
 // point to a struct that has AVClass as first member).
 // Options which fail to set (error or not found) are printed to log.
 // Returns: >=0 success, <0 failed to set an option
+//在给定的avobj上设置这些选项（使用av_opt_Set…，这意味着avobj必须指向以AVClass作为第一个成员的结构）。
+//无法设置（错误或未找到）的选项将打印到日志中。
+//返回：>=0成功，<0设置选项失败
 int mp_set_avopts(struct mp_log *log, void *avobj, char **kv)
 {
     return mp_set_avopts_pos(log, avobj, avobj, kv);
@@ -350,6 +364,7 @@ int mp_set_avopts(struct mp_log *log, void *avobj, char **kv)
 
 // Like mp_set_avopts(), but the posargs argument is used to resolve positional
 // arguments. If posargs==NULL, positional args are disabled.
+//posargs参数用于解析位置参数。如果posargs==NULL，则禁用位置参数。
 int mp_set_avopts_pos(struct mp_log *log, void *avobj, void *posargs, char **kv)
 {
     int success = 0;
