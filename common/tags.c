@@ -107,6 +107,8 @@ void mp_tags_replace(struct mp_tags *dst, struct mp_tags *src)
 // Return a copy of the tags, but containing only keys in list. Also forces
 // the order and casing of the keys (for cosmetic reasons).
 // A trailing '*' matches the rest.
+//返回标记的副本，但只包含列表中的键。还强制键的顺序和大小写（出于表面原因）。
+//尾随的“*”与其余部分匹配。
 struct mp_tags *mp_tags_filtered(void *tparent, struct mp_tags *tags, char **list)
 {
     struct mp_tags *new = talloc_zero(tparent, struct mp_tags);

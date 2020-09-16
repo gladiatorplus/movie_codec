@@ -33,10 +33,14 @@
 // Maximum number of packets we buffer at most to attempt to resync streams.
 // Essentially, this should be higher than the highest supported keyframe
 // interval.
+//尝试重新同步流时最多缓冲的最大数据包数。
+//本质上，这应该高于支持的最高关键帧间隔。
 #define QUEUE_MAX_PACKETS 256
 // Number of packets we should buffer at least to determine timestamps (due to
 // codec delay and frame reordering, and potentially lack of DTS).
 // Keyframe flags can trigger this earlier.
+//我们至少应该缓冲以确定时间戳的数据包数量（由于编解码器延迟和帧重新排序，并且可能缺少DTS）。
+//关键帧标志可以提前触发。
 #define QUEUE_MIN_PACKETS 16
 
 struct mp_recorder {
@@ -53,9 +57,11 @@ struct mp_recorder {
 
     // The start timestamp of the currently recorded segment (the timestamp of
     // the first packet of the incoming packet stream).
+    //当前记录段的开始时间戳（传入分组流的第一个分组的时间戳）。
     double base_ts;
     // The output packet timestamp corresponding to base_ts. It's the timestamp
     // of the first packet of the current segment written to the output.
+    //与基址相对应的输出数据包时间戳。它是写入输出的当前段的第一个数据包的时间戳。
     double rebase_ts;
 
     AVFormatContext *mux;
@@ -98,6 +104,9 @@ static int add_stream(struct mp_recorder *priv, struct sh_stream *sh)
     // DTS, the result will probably be broken. FFmpeg provides nothing better
     // yet (unless you demux with libavformat, which contains tons of hacks
     // that try to determine a PTS).
+    //我们不知道耽搁的时间，所以编点东西吧。如果格式需要
+    //DTS，结果可能会被破坏。FFmpeg还没有提供更好的功能
+    //（除非使用libavformat进行demux，libavformat包含大量试图确定PTS的hacks）。
     if (!sh->codec->lav_codecpar)
         avp->video_delay = 16;
 #endif
@@ -153,6 +162,7 @@ struct mp_recorder *mp_recorder_create(struct mpv_global *global,
 
     // Not sure how to write this in a "standard" way. It appears only mkv
     // and mp4 support this directly.
+    //不知道如何用“标准”的方式写这篇文章。似乎只有mkv和mp4直接支持这一点。
     char version[200];
     snprintf(version, sizeof(version), "%s experimental stream recording "
              "feature (can generate broken files - please report bugs)",
@@ -249,6 +259,7 @@ static void mux_packets(struct mp_recorder_sink *rst, bool force)
 
 // If there was a discontinuity, check whether we can resume muxing (and from
 // where).
+//如果有中断，检查是否可以恢复muxing（从哪里开始）。
 static void check_restart(struct mp_recorder *priv)
 {
     if (priv->muxing)
@@ -316,6 +327,7 @@ void mp_recorder_destroy(struct mp_recorder *priv)
 }
 
 // This is called on a seek, or when recording was started mid-stream.
+//这是在seek时调用的，或者在录制中途开始时调用。
 void mp_recorder_mark_discontinuity(struct mp_recorder *priv)
 {
     flush_packets(priv);
@@ -333,6 +345,7 @@ void mp_recorder_mark_discontinuity(struct mp_recorder *priv)
 // Get a stream for writing. The pointer is valid until mp_recorder is
 // destroyed. The stream is the index referencing the stream passed to
 // mp_recorder_create().
+//找一条写作的stream。指针在mp_recorder被销毁之前是有效的。流是引用传递给mp_recorder_create（）的流的索引。
 struct mp_recorder_sink *mp_recorder_get_sink(struct mp_recorder *r, int stream)
 {
     assert(stream >= 0 && stream < r->num_streams);
@@ -342,6 +355,7 @@ struct mp_recorder_sink *mp_recorder_get_sink(struct mp_recorder *r, int stream)
 // Pass a packet to the given stream. The function does not own the packet, but
 // can create a new reference to it if it needs to retain it. Can be NULL to
 // signal proper end of stream.
+//将数据包传递到给定的流。函数不拥有数据包，但如果需要保留它，可以创建对它的新引用。可以为NULL以表示流的正确结束。
 void mp_recorder_feed_packet(struct mp_recorder_sink *rst,
                              struct demux_packet *pkt)
 {
@@ -358,6 +372,9 @@ void mp_recorder_feed_packet(struct mp_recorder_sink *rst,
         // No, FFmpeg has no actually usable helpers to generate correct DTS.
         // No, FFmpeg doesn't tell us which formats need DTS at all.
         // No, we can not shut up the FFmpeg warning, which will follow.
+        //不，FFmpeg没有实际可用的助手来生成正确的DTS。
+        //不，FFmpeg根本没有告诉我们哪些格式需要DTS。
+        //不，我们不能关闭FFmpeg警告，它将紧随其后。
         MP_WARN(priv, "Source stream misses DTS on at least some packets!\n"
                       "If the target file format requires DTS, the written\n"
                       "file will be invalid.\n");

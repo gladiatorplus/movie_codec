@@ -145,6 +145,7 @@ bool mp_msg_test(struct mp_log *log, int lev)
 // Reposition cursor and clear lines for outputting the status line. In certain
 // cases, like term OSD and subtitle display, the status can consist of
 // multiple lines.
+//重新定位光标并清除输出状态行的行。在某些情况下，如术语OSD和字幕显示，状态可以由多行组成。
 static void prepare_status_line(struct mp_log_root *root, char *new_status)
 {
     FILE *f = stderr;
@@ -411,6 +412,11 @@ static void destroy_log(void *ptr)
 // If name is NULL, the parent's name/prefix is used.
 // Thread-safety: fully thread-safe, but keep in mind that talloc is not (so
 //                talloc_ctx must be owned by the current thread).
+//创建一个新的日志上下文，它将talloc\u ctx用作talloc父级，父级用作逻辑父级。
+//名称是放在输出之前的前缀。通常以家长的名字作为前缀。如果名称以“/”开头，
+//则父项的名称不加前缀（在冗余模式下除外），如果它以“！”开头，则根本不打印名称（在详细模式下除外）。
+//如果name为NULL，则使用父级的名称/前缀。
+//线程安全性：完全线程安全，但请记住，talloc不是（因此talloc\u ctx必须由当前线程拥有）。
 struct mp_log *mp_log_new(void *talloc_ctx, struct mp_log *parent,
                           const char *name)
 {
@@ -468,6 +474,9 @@ void mp_msg_init(struct mpv_global *global)
 // If there's an error, _append_ it to err_buf.
 // *current_path and *file are, rather trickily, only accessible under the
 // mp_msg_lock.
+//如果opt与*current_path不同，请重新打开*file并更新*current_path。
+//如果有错误，请将其附加到err_buf。
+//*当前路径和*文件只能在mp_msg_锁下访问。
 static void reopen_file(char *opt, char **current_path, FILE **file,
                         const char *type, struct mpv_global *global)
 {
