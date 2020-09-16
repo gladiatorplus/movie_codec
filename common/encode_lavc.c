@@ -263,6 +263,8 @@ static void maybe_init_muxer(struct encode_lavc_context *ctx)
     // Check if all streams were initialized yet. We need data to know the
     // AVStream parameters, so we wait for data from _all_ streams before
     // starting.
+    //检查是否已初始化所有流。我们需要数据来知道AVStream参数，
+    //所以我们在启动之前等待来自\u all_ustreams的数据
     for (int n = 0; n < p->num_streams; n++) {
         if (!p->streams[n]->st)
             return;
@@ -344,6 +346,7 @@ void encode_lavc_expect_stream(struct encode_lavc_context *ctx,
     enum AVMediaType codec_type = mp_to_av_stream_type(type);
 
     // These calls are idempotent.
+    //这些调用是幂等的。
     if (find_mux_stream(ctx, codec_type))
         goto done;
 
@@ -383,6 +386,8 @@ void encode_lavc_stream_eof(struct encode_lavc_context *ctx,
     // ever initialize it, we have a problem. We could mux some sort of dummy
     // stream (and could fail if actual data arrives later), or we bail out
     // early.
+    //如果我们已经到达EOF，即使流是被选中的，而且我们从未初始化过它，我们就有问题了。
+    //我们可以混合一些dumm流（如果实际数据迟些到达，可能会失败），或者我们提前退出。
     if (dst && !dst->st) {
         MP_ERR(p, "No data on stream %s.\n", dst->name);
         p->failed = true;
@@ -394,6 +399,9 @@ void encode_lavc_stream_eof(struct encode_lavc_context *ctx,
 // Signal that you are ready to encode (you provide the codec params etc. too).
 // This returns a muxing handle which you can use to add encodec packets.
 // Can be called only once per stream. info is copied by callee as needed.
+//表示你准备好编码了（你也提供了编解码器参数等）。
+//这将返回一个muxing句柄，您可以使用它来添加编码包。
+//每个流只能调用一次。被调用者根据需要复制信息。
 static struct mux_stream *encode_lavc_add_stream(struct encode_lavc_context *ctx,
                                                  struct encoder_stream_info *info,
                                                  void (*on_ready)(void *ctx),
@@ -765,6 +773,7 @@ static void encoder_destroy(void *ptr)
     free_stream(p->twopass_bytebuffer);
 }
 
+//寻找解码器
 struct encoder_context *encoder_context_alloc(struct encode_lavc_context *ctx,
                                               enum stream_type type,
                                               struct mp_log *log)
@@ -857,6 +866,7 @@ static void encoder_2pass_prepare(struct encoder_context *p)
     talloc_free(filename);
 }
 
+//打开解码器，获得stream ,avcodec_open2
 bool encoder_init_codec_and_muxer(struct encoder_context *p,
                                   void (*on_ready)(void *ctx), void *ctx)
 {
@@ -867,6 +877,7 @@ bool encoder_init_codec_and_muxer(struct encoder_context *p,
         : p->options->aopts;
 
     // Set these now, so the code below can read back parsed settings from it.
+    //现在设置这些设置，以便下面的代码可以从中读回已解析的设置。
     mp_set_avopts(p->log, p->encoder, copts);
 
     encoder_2pass_prepare(p);
@@ -923,6 +934,7 @@ fail:
     return false;
 }
 
+//得到packet
 bool encoder_encode(struct encoder_context *p, AVFrame *frame)
 {
     int status = avcodec_send_frame(p->encoder, frame);

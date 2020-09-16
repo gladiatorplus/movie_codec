@@ -163,6 +163,7 @@ static int query_format(struct vo *vo, int format)
     return 0;
 }
 
+//绘制帧
 static void draw_frame(struct vo *vo, struct vo_frame *voframe)
 {
     struct priv *vc = vo->priv;
