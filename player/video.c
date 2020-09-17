@@ -174,6 +174,9 @@ int init_video_decoder(struct MPContext *mpctx, struct track *track)
     // Note: at least mpv_opengl_cb_uninit_gl() relies on being able to get
     //       rid of all references to the VO by destroying the VO chain. Thus,
     //       decoders not linked to vo_chain must not use the hwdec context.
+    //如果可能，将其设置为parent，以便解码器获取hwdec和DR接口。
+    //注意：至少mpv_opengl_cb_uninit_gl（）依赖于能够通过销毁VO链来除去对VO的所有引用。
+    //因此，未链接到vo_chain的解码器不能使用hwdec上下文。
     if (track->vo_c)
         parent = track->vo_c->filter->f;
 
@@ -290,6 +293,7 @@ err_out:
 
 // Try to refresh the video by doing a precise seek to the currently displayed
 // frame. This can go wrong in all sorts of ways, so use sparingly.
+//尝试通过精确搜索当前显示的帧来刷新视频。这可能会以各种方式出错，所以要谨慎使用。
 void mp_force_video_refresh(struct MPContext *mpctx)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -334,6 +338,12 @@ static void check_framedrop(struct MPContext *mpctx, struct vo_chain *vo_c)
  * one second but only a packet with enough samples for half a second
  * of playback between them.
  */
+/*修改视频计时以匹配音频时间线。在文件的开头或一个seek之后有两个来自不同位置的主节点
+ （MPlayer都会立即启动，即使它们有不同的pts）。
+第二，该文件可以具有与音频分组的持续时间不一致的音频时间戳，例如两个连续的时间戳值相差一秒，
+但是只有一个具有足够的样本用于在它们之间回放半秒的分组。
+*/
+//音视频同步
 static void adjust_sync(struct MPContext *mpctx, double v_pts, double frame_time)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -362,6 +372,8 @@ static void adjust_sync(struct MPContext *mpctx, double v_pts, double frame_time
 // Make the frame at position 0 "known" to the playback logic. This must happen
 // only once for each frame, so this function has to be called carefully.
 // Generally, if position 0 gets a new frame, this must be called.
+//使位置0处的帧对回放逻辑“已知”。对于每个帧，这必须只发生一次，因此必须小心调用此函数。
+//通常，如果位置0得到一个新的帧，则必须调用它。
 static void handle_new_frame(struct MPContext *mpctx)
 {
     assert(mpctx->num_next_frames >= 1);
@@ -419,6 +431,8 @@ static int get_req_frames(struct MPContext *mpctx, bool eof)
 
     // On the first frame, output a new frame as quickly as possible.
     // But display-sync likes to have a correct frame duration always.
+    //在第一帧上，尽快输出新帧。
+    //但是显示同步总是希望有一个正确的帧持续时间。
     if (mpctx->video_pts == MP_NOPTS_VALUE)
         return mpctx->opts->video_sync == VS_DEFAULT ? 1 : min;
 
@@ -444,6 +458,8 @@ static void add_new_frame(struct MPContext *mpctx, struct mp_image *frame)
 
 // Enough video filtered already to push one frame to the VO?
 // Set eof to true if no new frames are to be expected.
+//已经过滤了足够多的视频到VO？
+//如果不需要新帧，则将eof设置为true。
 static bool have_new_frame(struct MPContext *mpctx, bool eof)
 {
     return mpctx->num_next_frames >= get_req_frames(mpctx, eof);
