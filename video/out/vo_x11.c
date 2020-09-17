@@ -268,10 +268,12 @@ static void Display_Image(struct priv *p, XImage *myximage)
 
     XImage *x_image = p->myximage[p->current_buf];
 
-    if (p->reset_view) {
-        XFillRectangle(vo->x11->display, vo->x11->window, p->gc, 0, 0, vo->dwidth, vo->dheight);
-        p->reset_view = false;
-    }
+    //xxj  commit id: d62131d3aeda6f3b4c255ca06e70573433a8f16a  for resize has black block, but not full,so can't resize quike,it is a bug .
+    //    if (p->reset_view) {
+    //        XFillRectangle(vo->x11->display, vo->x11->window, p->gc, 0, 0, vo->dwidth, vo->dheight);
+    //        p->reset_view = false;
+    //    }
+    //xxj
 
     if (p->Shmem_Flag) {
         XShmPutImage(vo->x11->display, vo->x11->window, p->gc, x_image,
