@@ -39,7 +39,8 @@ extern "C" {
  * It's somewhat equivalent to MPlayer's slave mode. You can send commands,
  * retrieve or set playback status or settings with properties, and receive
  * events.
- *
+ *这个API提供对mpv播放的一般控制。它不能让你直接访问播放器的各个组件，而只能访问整个组件。
+*这在某种程度上相当于MPlayer的从模式。您可以发送命令、检索或设置播放状态或具有属性的设置，以及接收事件。
  * The API can be used in two ways:
  * 1) Internally in mpv, to provide additional features to the command line
  *    player. Lua scripting uses this. (Currently there is no plugin API to
@@ -47,6 +48,10 @@ extern "C" {
  *    part of the player at compilation time.)
  * 2) Using mpv as a library with mpv_create(). This basically allows embedding
  *    mpv in other applications.
+ * API有两种用法：
+*1）在mpv内部，为命令行播放器提供附加功能。Lua脚本使用这个。（目前没有插件API在外部用户代码中获取客户端API句柄。
+* 它必须在编译时成为播放器的固定部分。）
+*2）使用mpv_create（）将mpv用作库。这基本上允许在其他应用程序中嵌入mpv。
  *
  * Documentation
  * -------------
@@ -56,7 +61,9 @@ extern "C" {
  * options/commands/properties, which can be accessed through this API.
  * Essentially everything is done with them, including loading a file,
  * retrieving playback progress, and so on.
- *
+ *libmpv C API直接记录在这个头文件中。请注意，与此播放器的大多数实际交互是通过选项/命令/属性完成的，
+ * 这些选项/命令/属性可以通过此API进行访问。
+*基本上所有的事情都是用它们来完成的，包括加载文件、检索播放进度等等。
  * These are documented elsewhere:
  *      * http://mpv.io/manual/master/#options
  *      * http://mpv.io/manual/master/#list-of-input-commands
@@ -74,11 +81,13 @@ extern "C" {
  * usage in other event loops (e.g. GUI toolkits) with the
  * mpv_set_wakeup_callback() function, and then polling for events by calling
  * mpv_wait_event() with a 0 timeout.
- *
+ *一般来说，API用户应该运行一个事件循环来接收事件。
+*此事件循环应调用mpv_wait_event（），一旦有新的mpv客户机API可用，它将返回。还可以将其他事件循环（例如GUI工具箱）
+* 中的客户端API使用与mpv_set_wakeup_callback（）函数集成，然后通过调用mpv_wait_event（）并超时0来轮询事件。
  * Note that the event loop is detached from the actual player. Not calling
  * mpv_wait_event() will not stop playback. It will eventually congest the
  * event queue of your API handle, though.
- *
+ *注意，事件循环与实际的播放器分离。不调用mpv_wait_event（）将不会停止播放。不过，它最终会阻塞API句柄的事件队列。
  * Synchronous vs. asynchronous calls
  * ----------------------------------
  *
@@ -87,7 +96,8 @@ extern "C" {
  * an unbounded time (e.g. if network is slow or unresponsive). Asynchronous
  * calls just queue operations as requests, and return the result of the
  * operation as events.
- *
+ *API允许同步和异步调用。同步调用必须等到播放核心准备就绪，这可能需要无限的时间（例如，如果网络速度慢或无响应）。
+ * 异步调用只是将操作作为请求排队，并将操作结果作为事件返回。
  * Asynchronous calls
  * ------------------
  *
@@ -95,20 +105,25 @@ extern "C" {
  * requests instantly, and get replies as events at a later point. The
  * requests are made with functions carrying the _async suffix, and replies
  * are returned by mpv_wait_event() (interleaved with the normal event stream).
- *
+ *客户机API包括异步函数。这些允许您立即发送请求，并在稍后的时间以事件的形式获得答复。
+ * 这些请求是用带有_async后缀的函数发出的，而回复由mpv_wait_event（）（与正常事件流交错）返回。
  * A 64 bit userdata value is used to allow the user to associate requests
  * with replies. The value is passed as reply_userdata parameter to the request
  * function. The reply to the request will have the reply
  * mpv_event->reply_userdata field set to the same value as the
  * reply_userdata parameter of the corresponding request.
- *
+ *64位userdata值用于允许用户将请求与答复相关联。该值作为reply_userdata参数传递给请求函数。
+ * 对请求的回复将把reply mpv_event->reply_userdata字段
+ * 设置为与对应请求的reply_userdata参数相同的值。
  * This userdata value is arbitrary and is never interpreted by the API. Note
  * that the userdata value 0 is also allowed, but then the client must be
  * careful not accidentally interpret the mpv_event->reply_userdata if an
  * event is not a reply. (For non-replies, this field is set to 0.)
- *
+ *这个userdata值是任意的，API从不解释它。请注意，userdata值0也是允许的，但是如果某个事件不是应答，则客户端必须小心，
+ * 不要意外地解释mpv_event->reply_userdata。（对于未答复，此字段设置为0。）
  * Currently, asynchronous calls are always strictly ordered (even with
  * synchronous calls) for each client, although that may change in the future.
+ * 目前，对于每个客户机，异步调用总是严格有序的（即使是同步调用也是如此），尽管这在将来可能会发生变化。
  *
  * Multithreading
  * --------------
@@ -117,6 +132,8 @@ extern "C" {
  * Currently, there is no real advantage in using more than 1 thread to access
  * the client API, since everything is serialized through a single lock in the
  * playback core.
+ * 客户端API通常是完全线程安全的，除非另有说明。
+*目前，使用多个线程访问客户机API没有真正的优势，因为所有的东西都是通过回放核心中的单个锁序列化的。
  *
  * Basic environment requirements
  * ------------------------------
@@ -158,43 +175,51 @@ extern "C" {
  * On OS X, filenames and other strings taken/returned by libmpv can have
  * inconsistent unicode normalization. This can sometimes lead to problems.
  * You have to hope for the best.
- *
+ *在OSX上，libmpv获取/返回的文件名和其他字符串可能具有不一致的unicode规范化。这有时会导致问题。你必须抱着最好的希望。
  * Also see the remarks for MPV_FORMAT_STRING.
  *
  * Embedding the video window
+ * 嵌入视频窗口
  * --------------------------
  *
  * Using the opengl-cb API (in opengl_cb.h) is recommended. This API requires
  * you to create and maintain an OpenGL context, to which you can render
  * video using a specific API call. This API does not include keyboard or mouse
  * input directly.
- *
+ *建议使用opengl cb API（在opengl_cb.h中）。此API要求您创建和维护OpenGL上下文，您可以使用特定的API调用将视频呈现到该上下文中。
+ * 此API不直接包括键盘或鼠标输入。
  * There is an older way to embed the native mpv window into your own. You have
  * to get the raw window handle, and set it as "wid" option. This works on X11,
  * win32, and OSX only. It's much easier to use than the opengl-cb API, but
  * also has various problems.
- *
+ *有一种古老的方法可以将原生mpv窗口嵌入到自己的窗口中。您必须获取原始窗口句柄，并将其设置为“wid”选项。
+ * 这仅适用于X11、win32和OSX。它比openglcbapi更容易使用，但也有各种各样的问题。
  * Also see client API examples and the mpv manpage. There is an extensive
  * discussion here:
  * https://github.com/mpv-player/mpv-examples/tree/master/libmpv#methods-of-embedding-the-video-window
  *
- * Compatibility
+ * Compatibility 兼容性
  * -------------
  *
  * mpv development doesn't stand still, and changes to mpv internals as well as
  * to its interface can cause compatibility issues to client API users.
+ * mpv的开发并没有停滞不前，对mpv内部结构及其接口的更改可能会对客户端API用户造成兼容性问题。
  *
  * The API is versioned (see MPV_CLIENT_API_VERSION), and changes to it are
  * documented in DOCS/client-api-changes.rst. The C API itself will probably
  * remain compatible for a long time, but the functionality exposed by it
  * could change more rapidly. For example, it's possible that options are
  * renamed, or change the set of allowed values.
+ * API是有版本的（参见MPV_CLIENT_API_版本），对它的更改记录在DOCS/CLIENT API中-更改.rst.
+ * C API本身可能会在很长一段时间内保持兼容，但它所暴露的功能可能会变化更快。例如，可以重命名选项，或者更改允许的值集。
  *
  * Defensive programming should be used to potentially deal with the fact that
  * options, commands, and properties could disappear, change their value range,
  * or change the underlying datatypes. It might be a good idea to prefer
  * MPV_FORMAT_STRING over other types to decouple your code from potential
  * mpv changes.
+ * 防御性编程应该用于潜在地处理这样一个事实：选项、命令和属性可能消失、更改其值范围或更改底层数据类型。
+ * 最好选择MPV_FORMAT_STRING而不是其他类型来将代码与潜在的MPV更改分离开来。
  */
 
 /**
@@ -203,7 +228,8 @@ extern "C" {
  * the API becomes incompatible to previous versions, the major version
  * number is incremented. This affects only C part, and not properties and
  * options.
- *
+ *每次API更改时，版本都会增加。低16位构成次版本号，高16位形成主版本号。
+ * 如果API与以前的版本不兼容，则主版本号将递增。这只影响C部分，而不影响属性和选项。
  * Every API bump is described in DOCS/client-api-changes.rst
  *
  * You can use MPV_MAKE_VERSION() and compare the result with integer
@@ -236,6 +262,7 @@ typedef struct mpv_handle mpv_handle;
 /**
  * List of error codes than can be returned by API functions. 0 and positive
  * return values always mean success, negative values are always errors.
+ * API函数可以返回的错误代码列表。0和正返回值总是表示成功，负值总是错误。
  */
 typedef enum mpv_error {
     /**
@@ -243,6 +270,8 @@ typedef enum mpv_error {
      * Keep in mind that many API functions returning error codes can also
      * return positive values, which also indicate success. API users can
      * hardcode the fact that ">= 0" means success.
+     * 没有发生错误（用于发出成功操作的信号）。
+     *请记住，许多返回错误代码的API函数也可以返回正值，这也表示成功。API用户可以硬编码“>=0”表示成功。
      */
     MPV_ERROR_SUCCESS           = 0,
     /**
@@ -252,7 +281,11 @@ typedef enum mpv_error {
      * unless the mpv core is frozen for some reason, and the client keeps
      * making asynchronous requests. (Bugs in the client API implementation
      * could also trigger this, e.g. if events become "lost".)
+     *事件环形缓冲区已满。这意味着客户端被阻塞，无法接收任何事件。当发出过多的异步请求但未得到响应时，可能会发生这种情况。
+     * 在实践中可能永远不会发生，除非mpv核心由于某种原因被冻结，并且客户机不断地发出异步请求。
+     * （客户端API实现中的错误也可能触发此问题，例如，如果事件变成“丢失”。）
      */
+
     MPV_ERROR_EVENT_QUEUE_FULL  = -1,
     /**
      * Memory allocation failed.
@@ -261,11 +294,13 @@ typedef enum mpv_error {
     /**
      * The mpv core wasn't configured and initialized yet. See the notes in
      * mpv_create().
+     * *mpv核心尚未配置和初始化。请参见mpv_create（）中的注释。
      */
     MPV_ERROR_UNINITIALIZED     = -3,
     /**
      * Generic catch-all error if a parameter is set to an invalid or
      * unsupported value. This is used if there is no better error code.
+     * *如果参数设置为无效或不受支持的值，则出现泛型catch all错误。如果没有更好的错误代码，则使用此选项。
      */
     MPV_ERROR_INVALID_PARAMETER = -4,
     /**
@@ -279,6 +314,7 @@ typedef enum mpv_error {
     /**
      * Setting the option failed. Typically this happens if the provided option
      * value could not be parsed.
+     * *设置选项失败。通常，如果无法解析提供的选项值，则会发生这种情况。
      */
     MPV_ERROR_OPTION_ERROR      = -7,
     /**
@@ -355,6 +391,8 @@ const char *mpv_error_string(int error);
  * General function to deallocate memory returned by some of the API functions.
  * Call this only if it's explicitly documented as allowed. Calling this on
  * mpv memory not owned by the caller will lead to undefined behavior.
+ * *用于释放某些API函数返回的内存的常规函数。
+ *只有在明确记录为允许的情况下才调用此函数。在不属于调用者的mpv内存上调用此函数将导致未定义的行为。
  *
  * @param data A valid pointer returned by the API, or NULL.
  */
@@ -1178,6 +1216,7 @@ int mpv_unobserve_property(mpv_handle *mpv, uint64_t registered_reply_userdata);
 typedef enum mpv_event_id {
     /**
      * Nothing happened. Happens on timeouts or sporadic wakeups.
+     * 什么也没发生。在超时或偶尔唤醒时发生。
      */
     MPV_EVENT_NONE              = 0,
     /**
@@ -1185,6 +1224,8 @@ typedef enum mpv_event_id {
      * to disconnect all clients. Most requests to the player will fail, and
      * the client should react to this and quit with mpv_destroy() as soon as
      * possible.
+     * *当玩家退出时发生。播放器进入一个状态，试图断开所有客户端的连接。
+     * 大多数对播放器的请求都会失败，客户端应该对此作出反应并尽快使用mpv_destroy（）退出。
      */
     MPV_EVENT_SHUTDOWN          = 1,
     /**
@@ -1207,16 +1248,19 @@ typedef enum mpv_event_id {
     MPV_EVENT_COMMAND_REPLY     = 5,
     /**
      * Notification before playback start of a file (before the file is loaded).
+     * 文件播放开始前的通知（在加载文件之前）。
      */
     MPV_EVENT_START_FILE        = 6,
     /**
      * Notification after playback end (after the file was unloaded).
      * See also mpv_event and mpv_event_end_file.
+     * 播放结束后的通知（在文件卸载后）。另请参阅mpv_event和mpv_event_end_文件。
      */
     MPV_EVENT_END_FILE          = 7,
     /**
      * Notification when the file has been loaded (headers were read etc.), and
      * decoding starts.
+     * 当文件已加载（头被读取等）并开始解码时通知。
      */
     MPV_EVENT_FILE_LOADED       = 8,
 #if MPV_ENABLE_DEPRECATED
@@ -1224,6 +1268,7 @@ typedef enum mpv_event_id {
      * The list of video/audio/subtitle tracks was changed. (E.g. a new track
      * was found. This doesn't necessarily indicate a track switch; for this,
      * MPV_EVENT_TRACK_SWITCHED is used.)
+     * 视频/音频/字幕曲目列表已更改。（例如，发现了一条新的赛道。这并不一定表示轨道转换；为此，使用MPV_EVENT_track_SWITCHED。）
      *
      * @deprecated This is equivalent to using mpv_observe_property() on the
      *             "track-list" property. The event is redundant, and might
@@ -1236,6 +1281,7 @@ typedef enum mpv_event_id {
      * @deprecated This is equivalent to using mpv_observe_property() on the
      *             "vid", "aid", and "sid" properties. The event is redundant,
      *             and might be removed in the far future.
+     * 这相当于在“vid”、“aid”和“sid”属性上使用mpv_observe_property（）。该事件是多余的，可能在将来被删除。
      */
     MPV_EVENT_TRACK_SWITCHED    = 10,
 #endif
@@ -1244,32 +1290,42 @@ typedef enum mpv_event_id {
      * core waits for new commands. (The command line player normally quits
      * instead of entering idle mode, unless --idle was specified. If mpv
      * was started with mpv_create(), idle mode is enabled by default.)
+     * *进入空闲模式。在这种模式下，不播放文件，回放核心等待新命令。
+     * （除非指定了--idle，否则命令行播放器通常会退出而不是进入idle模式。如果mpv是用mpv_create（）启动的，则默认启用空闲模式。）
      */
     MPV_EVENT_IDLE              = 11,
 #if MPV_ENABLE_DEPRECATED
     /**
      * Playback was paused. This indicates the user pause state.
+     * 播放已暂停。这表示用户暂停状态。
      *
      * The user pause state is the state the user requested (changed with the
      * "pause" property). There is an internal pause state too, which is entered
      * if e.g. the network is too slow (the "core-idle" property generally
      * indicates whether the core is playing or waiting).
+     * 用户暂停状态是用户请求的状态（用“pause”属性更改）。也有一个内部暂停状态，如果网络太慢，“核心空闲”属性通常表示核心正在播放还是等待。
      *
      * This event is sent whenever any pause states change, not only the user
      * state. You might get multiple events in a row while these states change
      * independently. But the event ID sent always indicates the user pause
      * state.
+     * 此事件在任何暂停状态发生变化时发送，而不仅仅是用户状态。
+     * 当这些状态独立更改时，您可能会在一行中获得多个事件。但是发送的事件ID始终指示用户暂停状态。
      *
      * If you don't want to deal with this, use mpv_observe_property() on the
      * "pause" property and ignore MPV_EVENT_PAUSE/UNPAUSE. Likewise, the
      * "core-idle" property tells you whether video is actually playing or not.
+     * 如果不想处理此问题，请在“pause”属性上使用mpv_observe_property（），并忽略mpv_EVENT_pause/UNPAUSE。
+     * 同样，“core idle”属性告诉您视频是否正在播放。
      *
      * @deprecated The event is redundant with mpv_observe_property() as
      *             mentioned above, and might be removed in the far future.
+     * 如前所述，此事件与mpv_observe_property（）是冗余的，将来可能会被删除。
      */
     MPV_EVENT_PAUSE             = 12,
     /**
      * Playback was unpaused. See MPV_EVENT_PAUSE for not so obvious details.
+     * 播放未暂停。请参阅MPV_EVENT_PAUSE了解不太明显的细节。
      *
      * @deprecated The event is redundant with mpv_observe_property() as
      *             explained in the MPV_EVENT_PAUSE comments, and might be
@@ -1282,6 +1338,8 @@ typedef enum mpv_event_id {
      * this will be sent in lower frequency if there is no video, or playback
      * is paused - but that will be removed in the future, and it will be
      * restricted to video frames only.
+     * 每次显示视频帧后发送。请注意，目前，如果没有视频，或者播放暂停，则会以较低的频率发送此消息，
+     * 但以后将删除这些内容，并且仅限于视频帧。
      */
     MPV_EVENT_TICK              = 14,
 #if MPV_ENABLE_DEPRECATED
@@ -1292,6 +1350,9 @@ typedef enum mpv_event_id {
      *             replaced with "script-binding".
      *             This event never happens anymore, and is included in this
      *             header only for compatibility.
+     * 这是内部使用的内部“脚本调度”
+       为OSC分配键盘和鼠标输入的命令。一般来说，它从来没有用过，而是被“脚本绑定”完全取代了。
+       此事件再也不会发生，仅出于兼容性考虑才将其包含在此标头中。
      */
     MPV_EVENT_SCRIPT_INPUT_DISPATCH = 15,
 #endif
@@ -1301,6 +1362,8 @@ typedef enum mpv_event_id {
      * dispatch the message, and passes along all arguments starting from the
      * second argument as strings.
      * See also mpv_event and mpv_event_client_message.
+     * *由脚本消息输入命令触发。该命令使用命令的第一个参数作为客户端名称（请参见mpv_client_name（））来分派消息，
+     * 并将从第二个参数开始的所有参数作为字符串传递。另请参阅mpv_event和mpv_event_client_消息。
      */
     MPV_EVENT_CLIENT_MESSAGE    = 16,
     /**
@@ -1312,11 +1375,15 @@ typedef enum mpv_event_id {
      * Note that this event can happen sporadically, and you should check
      * yourself whether the video parameters really changed before doing
      * something expensive.
+     * 在视频以某种方式改变后发生。这可能发生在分辨率更改、像素格式更改或视频过滤器更改时。
+     * 事件在视频过滤器和VO重新配置后发送。嵌入mpv窗口的应用程序应该监听此事件，以便在需要时调整窗口大小。
+     *注意，这个事件可能偶尔发生，你应该在做一些昂贵的事情之前检查一下视频参数是否真的改变了。
      */
     MPV_EVENT_VIDEO_RECONFIG    = 17,
     /**
      * Similar to MPV_EVENT_VIDEO_RECONFIG. This is relatively uninteresting,
      * because there is no such thing as audio output embedding.
+     * *类似于MPV事件视频重构。这是相对无趣的，因为没有所谓的音频输出嵌入。
      */
     MPV_EVENT_AUDIO_RECONFIG    = 18,
 #if MPV_ENABLE_DEPRECATED
@@ -1324,6 +1391,7 @@ typedef enum mpv_event_id {
      * Happens when metadata (like file tags) is possibly updated. (It's left
      * unspecified whether this happens on file start or only when it changes
      * within a file.)
+     * 当元数据（如文件标记）可能更新时发生。（未指定这是在文件启动时发生还是仅在文件内发生更改时发生。）
      *
      * @deprecated This is equivalent to using mpv_observe_property() on the
      *             "metadata" property. The event is redundant, and might
@@ -1334,6 +1402,7 @@ typedef enum mpv_event_id {
     /**
      * Happens when a seek was initiated. Playback stops. Usually it will
      * resume with MPV_EVENT_PLAYBACK_RESTART as soon as the seek is finished.
+     * *在启动查找时发生。播放停止。通常，搜索完成后，它将以MPV_EVENT_PLAYBACK_重新启动来恢复。
      */
     MPV_EVENT_SEEK              = 20,
     /**
@@ -1341,6 +1410,7 @@ typedef enum mpv_event_id {
      * was reinitialized. Usually happens after seeking, or ordered chapter
      * segment switches. The main purpose is allowing the client to detect
      * when a seek request is finished.
+     * *有某种不连续性（比如seek），回放被重新初始化。通常发生在查找后，或顺序章节段切换。其主要目的是允许客户机检测seek请求何时完成。
      */
     MPV_EVENT_PLAYBACK_RESTART  = 21,
     /**
@@ -1350,7 +1420,7 @@ typedef enum mpv_event_id {
     MPV_EVENT_PROPERTY_CHANGE   = 22,
 #if MPV_ENABLE_DEPRECATED
     /**
-     * Happens when the current chapter changes.
+     * Happens when the current chapter changes.当前章节发生变化时。
      *
      * @deprecated This is equivalent to using mpv_observe_property() on the
      *             "chapter" property. The event is redundant, and might
@@ -1366,6 +1436,9 @@ typedef enum mpv_event_id {
      *
      * Event delivery will continue normally once this event was returned
      * (this forces the client to empty the queue completely).
+     * *如果内部per-mpv_句柄环形缓冲区溢出，并且必须除去至少1个事件，则发生此事件。
+     * 如果客户端使用mpv_wait_event（）读取事件队列的速度不够快，或者客户机一次进行大量异步调用，则可能会发生这种情况。
+     *一旦返回此事件，事件传递将正常继续（这将迫使客户端完全清空队列）。
      */
     MPV_EVENT_QUEUE_OVERFLOW    = 24,
     /**
@@ -1373,6 +1446,9 @@ typedef enum mpv_event_id {
      * hook is invoked. If you receive this, you must handle it, and continue
      * the hook with mpv_hook_continue().
      * See also mpv_event and mpv_event_hook.
+     * *如果使用mpv_hook_add（）注册了钩子处理程序，并且调用了该钩子，则会触发该钩子。
+     * 如果收到此消息，则必须处理它，并使用mpv_hook_continue（）继续钩子。
+     *另请参阅mpv_event和mpv_event_hook。
      */
     MPV_EVENT_HOOK              = 25,
     // Internal note: adjust INTERNAL_EVENT_BASE when adding new events.
