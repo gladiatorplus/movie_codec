@@ -1548,10 +1548,13 @@ typedef enum mpv_end_file_reason {
      * incomplete or corrupted files, or if the network connection was
      * interrupted when playing a remote file. It also happens if the
      * playback range was restricted with --end or --frames or similar.
+     * *已到达文件结尾。有时，不完整或损坏的文件，或者播放远程文件时网络连接中断，也可能发生这种情况。
+     * 如果播放范围受到--end或--frames或类似限制，也会发生这种情况。
      */
     MPV_END_FILE_REASON_EOF = 0,
     /**
      * Playback was stopped by an external action (e.g. playlist controls).
+     * 播放被外部操作（例如播放列表控件）停止。
      */
     MPV_END_FILE_REASON_STOP = 2,
     /**
@@ -1562,6 +1565,8 @@ typedef enum mpv_end_file_reason {
      * Some kind of error happened that lead to playback abort. Does not
      * necessarily happen on incomplete or broken files (in these cases, both
      * MPV_END_FILE_REASON_ERROR or MPV_END_FILE_REASON_EOF are possible).
+     * *发生了某种错误，导致播放中止。
+     * 不一定发生在不完整或损坏的文件上（在这种情况下，MPV_END_FILE_REASON_ERROR或MPV_END_FILE_REASON_EOF都可能发生）。
      *
      * mpv_event_end_file.error will be set.
      */
@@ -1572,6 +1577,9 @@ typedef enum mpv_end_file_reason {
      * file, the entry of the current file is removed, and a MPV_EVENT_END_FILE
      * event is sent with reason set to MPV_END_FILE_REASON_REDIRECT. Then
      * playback continues with the playlist contents.
+     * *该文件是播放列表或类似文件。读取播放列表时，其条目将在当前文件条目之后追加到播放列表中，
+     * 删除当前文件的条目，并发送一个MPV_EVENT_END_file事件，并将reason设置为MPV_END_file_reason_REDIRECT。
+     * 然后播放列表内容继续播放。
      * Since API version 1.18.
      */
     MPV_END_FILE_REASON_REDIRECT = 5,
@@ -1581,6 +1589,7 @@ typedef struct mpv_event_end_file {
     /**
      * Corresponds to the values in enum mpv_end_file_reason (the "int" type
      * will be replaced with mpv_end_file_reason on the next ABI bump).
+     * *对应于enum mpv_end_file_reason中的值（在下一个ABI bump上，“int”类型将替换为mpv_end_file_reason）。
      *
      * Unknown values should be treated as unknown.
      */
@@ -1609,6 +1618,9 @@ typedef struct mpv_event_client_message {
      * you can access args[0] through args[num_args - 1] (inclusive). What
      * these arguments mean is up to the sender and receiver.
      * None of the valid items are NULL.
+     * *消息发送者选择的任意参数。如果num_args>0，则可以通过args[num_args-1]（包括这两个值）访问args[0]。
+     * 这些论点意味着什么取决于发送者和接收者。
+     *所有有效项都不为空。
      */
     int num_args;
     const char **args;
@@ -1629,6 +1641,7 @@ typedef struct mpv_event {
     /**
      * One of mpv_event. Keep in mind that later ABI compatible releases might
      * add new event types. These should be ignored by the API user.
+     * *一个mpv事件。请记住，稍后的ABI兼容版本可能会添加新的事件类型。这些应该被API用户忽略。
      */
     mpv_event_id event_id;
     /**
@@ -1636,6 +1649,7 @@ typedef struct mpv_event {
      * requests. It contains a status code, which is >= 0 on success, or < 0
      * on error (a mpv_error value). Usually, this will be set if an
      * asynchronous request fails.
+     * *这主要用于响应（异步）请求的事件。它包含一个状态代码，成功时为>=0，出错时为<0（mpv_错误值）。通常，如果异步请求失败，将设置此选项。
      * Used for:
      *  MPV_EVENT_GET_PROPERTY_REPLY
      *  MPV_EVENT_SET_PROPERTY_REPLY
@@ -1704,6 +1718,7 @@ int mpv_request_log_messages(mpv_handle *ctx, const char *min_level);
  * Wait for the next event, or until the timeout expires, or if another thread
  * makes a call to mpv_wakeup(). Passing 0 as timeout will never wait, and
  * is suitable for polling.
+ * 等待下一个事件，或者等待超时过期，或者其他线程调用mpv_wakeup（）。传递0作为超时将永远不会等待，并且适合于轮询。
  *
  * The internal event queue has a limited size (per client handle). If you
  * don't empty the event queue quickly enough with mpv_wait_event(), it will
@@ -1716,6 +1731,8 @@ int mpv_request_log_messages(mpv_handle *ctx, const char *min_level);
  * Note that most other API functions are not restricted by this, and no API
  * function internally calls mpv_wait_event(). Additionally, concurrent calls
  * to different mpv_handles are always safe.
+ * 内部事件队列的大小有限（每个客户端句柄）。如果您没有使用mpv_wait_event（）足够快地清空事件队列，
+ * 它将溢出并静默地丢弃进一步的事件。如果发生这种情况，异步请求也将失败（MPV_ERROR_EVENT_QUEUE_FULL）。
  *
  * As long as the timeout is 0, this is safe to be called from mpv render API
  * threads.
@@ -1738,11 +1755,15 @@ mpv_event *mpv_wait_event(mpv_handle *ctx, double timeout);
  * currently waiting in mpv_wait_event(). If no thread is waiting, the next
  * mpv_wait_event() call will return immediately (this is to avoid lost
  * wakeups).
+ * 中断当前mpv_wait_event（）调用。这将唤醒当前在mpv_wait_event（）中等待的线程。
+ * 如果没有线程在等待，下一个mpv_wait_event（）调用将立即返回（这是为了避免丢失唤醒）。
  *
  * mpv_wait_event() will receive a MPV_EVENT_NONE if it's woken up due to
  * this call. But note that this dummy event might be skipped if there are
  * already other events queued. All what counts is that the waiting thread
  * is woken up at all.
+ * *如果mpv_wait_event（）由于此调用而被唤醒，则它将收到mpv_event_NONE。但请注意，
+ * 如果已经有其他事件排队，则可能会跳过此虚拟事件。重要的是等待的线程被唤醒。
  *
  * Safe to be called from mpv render API threads.
  */
@@ -1790,13 +1811,17 @@ void mpv_set_wakeup_callback(mpv_handle *ctx, void (*cb)(void *d), void *d);
  * Block until all asynchronous requests are done. This affects functions like
  * mpv_command_async(), which return immediately and return their result as
  * events.
+ * 阻塞，直到所有异步请求完成。这会影响mpv_command_async（）等函数，这些函数会立即返回并以事件形式返回结果。
  *
  * This is a helper, and somewhat equivalent to calling mpv_wait_event() in a
  * loop until all known asynchronous requests have sent their reply as event,
  * except that the event queue is not emptied.
+ * 这是一个helper，在某种程度上相当于在循环中调用mpv_wait_event（），
+ * 直到所有已知的异步请求都以事件形式发送了它们的回复，但事件队列没有清空。
  *
  * In case you called mpv_suspend() before, this will also forcibly reset the
  * suspend counter of the given handle.
+ * 如果您之前调用了mpv_suspend（），那么这也将强制重置给定句柄的挂起计数器。
  */
 void mpv_wait_async_requests(mpv_handle *ctx);
 
@@ -1805,16 +1830,22 @@ void mpv_wait_async_requests(mpv_handle *ctx);
  * a hook handler with this function. You will get an event, which you need
  * to handle, and once things are ready, you can let the player continue with
  * mpv_hook_continue().
+ * *钩子就像一个阻止玩家的同步事件。用这个函数注册一个钩子处理程序。你将得到一个你需要处理的事件，一旦一切就绪，
+ * 你可以让玩家继续mpv_hook_continue（）。
  *
  * Currently, hooks can't be removed explicitly. But they will be implicitly
  * removed if the mpv_handle it was registered with is destroyed. This also
  * continues the hook if it was being handled by the destroyed mpv_handle (but
  * this should be avoided, as it might mess up order of hook execution).
+ * *目前，无法显式删除钩子。但如果注册的mpv_句柄被销毁，它们将被隐式删除。
+ * 如果钩子是由被破坏的mpv_句柄处理的，这也会继续钩子（但这应该避免，因为它可能会扰乱钩子的执行顺序）。
  *
  * Hook handlers are ordered globally by priority and order of registration.
  * Handlers for the same hook with same priority are invoked in order of
  * registration (the handler registered first is run first). Handlers with
  * lower priority are run first (which seems backward).
+ * *钩子处理程序按优先级和注册顺序全局排序。
+ *具有相同优先级的同一钩子的处理程序按注册顺序调用（首先注册的处理程序先运行）。优先级较低的处理程序首先运行（这似乎是向后的）。
  *
  * See the "Hooks" section in the manpage to see which hooks are currently
  * defined.
@@ -1865,6 +1896,9 @@ int mpv_hook_continue(mpv_handle *ctx, uint64_t id);
  * a primitive mechanism to handle coordinating a foreign event loop and the
  * libmpv event loop. The pipe is non-blocking. It's closed when the mpv_handle
  * is destroyed. This function always returns the same value (on success).
+ * 返回指向管道读取端的UNIX文件描述符。此管道可用于唤醒基于poll（）的处理循环。此函数的用途与mpv_set_wakeup_callback（）非常相似，
+ * 它提供了一种原始机制来处理外部事件循环和libmpv事件循环的协调。管道不堵塞。
+ * 当mpv的把手被破坏时，它就关闭了。此函数始终返回相同的值（成功时）。
  *
  * This is in fact implemented using the same underlying code as for
  * mpv_set_wakeup_callback() (though they don't conflict), and it is as if each
@@ -1879,6 +1913,13 @@ int mpv_hook_continue(mpv_handle *ctx, uint64_t id);
  * of events queued. Also, it's possible that mpv does not write to the pipe
  * once it's guaranteed that the client was already signaled. See the example
  * below how to do it correctly.
+ * 实际上，这是使用与mpv_set_wakeup_callback（）相同的底层代码实现的（尽管它们并不冲突），
+ * 就像每次回调调用向管道写入一个0字节一样。当管道变得可读时，
+ * 管道上调用poll（）（或select（））的代码应该读取管道的所有内容，然后调用mpv_wait_event（c，0），直到没有返回新的事件。
+ * 管道内容物无关紧要，可以丢弃。管道中的每个可读事件不一定有一个字节。例如，管道是非阻塞的，
+ * 如果管道是满的，mpv不会阻塞。管道通常被限制为4096个字节，因此如果事件数超过4096个，则可读字节数不能等于排队的事件数。
+ * 而且，一旦保证客户端已经收到信号，mpv也可能不会写入管道。
+ * 请参阅下面的示例如何正确地执行此操作。
  *
  * Example:
  *
