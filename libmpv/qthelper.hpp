@@ -60,6 +60,10 @@ public:
     // destroying the mpv_handle.
     // Never create multiple wrappers from the same raw mpv_handle; copy the
     // wrapper instead (that's what it's for).
+    //从refcount为1的原始mpv_handle构造一个新句柄。如果最后一个句柄超出范围，
+    //则mpv_Handle将使用mpv_terminate_destroy（）销毁。
+    //使用此包装时，切勿手动销毁mpv_handle。您将创建悬空指针。只需让包装器负责销毁mpv的handle。
+    //不要从同一个原始mpv_handle创建多个包装器；而是复制包装器（这就是它的用途）。
     static Handle FromRawHandle(mpv_handle *handle) {
         Handle h;
         h.sptr = QSharedPointer<container>(new container(handle));

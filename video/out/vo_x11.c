@@ -267,11 +267,11 @@ static void Display_Image(struct priv *p, XImage *myximage)
     struct vo *vo = p->vo;
 
     XImage *x_image = p->myximage[p->current_buf];
-
-    if (p->reset_view) {
-        XFillRectangle(vo->x11->display, vo->x11->window, p->gc, 0, 0, vo->dwidth, vo->dheight);
-        p->reset_view = false;
-    }
+//
+//    if (p->reset_view) {
+//        XFillRectangle(vo->x11->display, vo->x11->window, p->gc, 0, 0, vo->dwidth, vo->dheight);
+//        p->reset_view = false;
+//    }
 
     if (p->Shmem_Flag) {
         XShmPutImage(vo->x11->display, vo->x11->window, p->gc, x_image,
