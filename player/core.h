@@ -182,6 +182,7 @@ struct vo_chain {
     //-视频由一张图片组成，只能显示一次。不要以任何方式同步音频到视频
     bool is_coverart;
     // - video consists of sparse still images
+    //视频由稀疏静止图像组成
     bool is_sparse;
 };
 
@@ -360,6 +361,7 @@ typedef struct MPContext {
     //AV同步：当音频输出有这么多（以秒为单位）的缓冲数据时，应该显示下一帧。向ao写入更多数据时增加，移动到下一个视频帧时减小。
     double delay;
     // AV sync: time in seconds until next frame should be shown
+    //AV同步：显示下一帧之前的时间（以秒为单位）
     double time_frame;
     // How much video timing has been changed to make it match the audio
     // timeline. Used for status line information only.

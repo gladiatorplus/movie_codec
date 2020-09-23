@@ -79,6 +79,7 @@ void uninit_sub_all(struct MPContext *mpctx)
         uninit_sub(mpctx, mpctx->tracks[n]);
 }
 
+//字幕
 static bool update_subtitle(struct MPContext *mpctx, double video_pts,
                             struct track *track)
 {
@@ -125,6 +126,8 @@ static bool update_subtitle(struct MPContext *mpctx, double video_pts,
 
 // Return true if the subtitles for the given PTS are ready; false if the player
 // should wait for new demuxer data, and then should retry.
+//如果给定PTS的字幕已经准备好，则返回true；如果播放器应该等待新的demuxer数据，然后应该重试，则返回false。
+//字幕
 bool update_subtitles(struct MPContext *mpctx, double video_pts)
 {
     bool ok = true;

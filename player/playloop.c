@@ -86,7 +86,7 @@ void mp_wakeup_core(struct MPContext *mpctx)
     mp_dispatch_interrupt(mpctx->dispatch);
 }
 
-// Opaque callback variant of mp_wakeup_core().
+// Opaque callback variant of mp_wakeup_core().mp_wakeup_core（）的不透明回调变量。
 void mp_wakeup_core_cb(void *ctx)
 {
     struct MPContext *mpctx = ctx;
@@ -755,6 +755,7 @@ static void handle_vo_events(struct MPContext *mpctx)
     if (events & VO_EVENT_FULLSCREEN_STATE) {
         // The only purpose of this is to update the fullscreen flag on the
         // playloop side if it changes "from outside" on the VO.
+        //这样做的唯一目的是更新playloop端的全屏标志，如果它在VO上“从外部”更改。
         int fs = mpctx->opts->vo->fullscreen;
         vo_control(vo, VOCTRL_GET_FULLSCREEN, &fs);
         m_config_set_option_raw_direct(mpctx->mconfig,

@@ -527,6 +527,7 @@ void update_osd_msg(struct MPContext *mpctx)
     if (mpctx->osd_msg_next_duration > 0) {
         // This is done to avoid cutting the OSD message short if slow commands
         // are executed between setting the OSD message and showing it.
+        //这样做是为了避免在设置OSD消息和显示OSD消息之间执行缓慢的命令，从而避免缩短OSD消息。
         mpctx->osd_msg_visible = now + mpctx->osd_msg_next_duration;
         mpctx->osd_msg_next_duration = 0;
     }

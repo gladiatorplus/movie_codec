@@ -295,7 +295,7 @@ void error_on_track(struct MPContext *mpctx, struct track *track)
     }
     mp_wakeup_core(mpctx);
 }
-
+//打开文件
 int stream_dump(struct MPContext *mpctx, const char *source_filename)
 {
     struct MPOpts *opts = mpctx->opts;

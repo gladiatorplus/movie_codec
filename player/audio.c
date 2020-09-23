@@ -892,6 +892,7 @@ void fill_audio_out_buffers(struct MPContext *mpctx)
     // If EOF was reached before, but now something can be decoded, try to
     // restart audio properly. This helps with video files where audio starts
     // later. Retrying is needed to get the correct sync PTS.
+    //如果以前达到过EOF，但现在可以解码某些内容，请尝试正确地重新启动音频。这有助于处理稍后开始播放音频的视频文件。需要重试以获得正确的同步点。
     if (mpctx->audio_status >= STATUS_DRAINING &&
         mp_audio_buffer_samples(ao_c->ao_buffer) > 0)
     {

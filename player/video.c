@@ -309,7 +309,7 @@ void mp_force_video_refresh(struct MPContext *mpctx)
         issue_refresh_seek(mpctx, MPSEEK_VERY_EXACT);
     }
 }
-
+//帧丢弃
 static void check_framedrop(struct MPContext *mpctx, struct vo_chain *vo_c)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -396,12 +396,14 @@ static void handle_new_frame(struct MPContext *mpctx)
     mpctx->delay -= frame_time;
     if (mpctx->video_status >= STATUS_PLAYING) {
         mpctx->time_frame += frame_time / mpctx->video_speed;
+        //同步检测
         adjust_sync(mpctx, pts, frame_time);
     }
     MP_TRACE(mpctx, "frametime=%5.3f\n", frame_time);
 }
 
 // Remove the first frame in mpctx->next_frames
+//删除帧
 static void shift_frames(struct MPContext *mpctx)
 {
     if (mpctx->num_next_frames < 1)
@@ -467,6 +469,7 @@ static bool have_new_frame(struct MPContext *mpctx, bool eof)
 
 // Fill mpctx->next_frames[] with a newly filtered or decoded image.
 // returns VD_* code
+//视频图片输出，帧操作
 static int video_output_image(struct MPContext *mpctx)
 {
     struct vo_chain *vo_c = mpctx->vo_chain;
@@ -563,6 +566,10 @@ static bool check_for_hwdec_fallback(struct MPContext *mpctx)
 /* Update avsync before a new video frame is displayed. Actually, this can be
  * called arbitrarily often before the actual display.
  * This adjusts the time of the next video frame */
+/*在显示新视频帧之前更新avsync。实际上，这可能是
+在实际显示之前经常被任意调用。
+这将调整下一个视频帧的时间*/
+//音视频同步
 static void update_avsync_before_frame(struct MPContext *mpctx)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -591,6 +598,8 @@ static void update_avsync_before_frame(struct MPContext *mpctx)
              * This is badly implemented; the behavior of the smoothing
              * now undesirably depends on how often this code runs
              * (mainly depends on video frame rate). */
+            /*通过使用基于previus值和此后经过的时间的期望值对AO报告的回放位置进行平滑处理。可能有助于平滑视频定时与音频输出有不准确的位置报告。
+            这是一个糟糕的实现；平滑的行为现在不希望取决于该代码运行的频率（主要取决于视频帧速率）。*/
             buffered_audio = predicted + difference / opts->autosync;
         }
 
@@ -602,6 +611,8 @@ static void update_avsync_before_frame(struct MPContext *mpctx)
          * the current frame instead.
          * If untimed is set always output frames immediately
          * without sleeping.
+         *如果我们在正确播放位置后超过200毫秒，不要试图加快以下帧的显示速度以赶上，而是从当前帧继续默认速度。
+         *如果设置了untimed，则始终在不休眠的情况下立即输出帧。
          */
         if (mpctx->time_frame < -0.2 || opts->untimed || vo->driver->untimed)
             mpctx->time_frame = 0;
@@ -609,6 +620,7 @@ static void update_avsync_before_frame(struct MPContext *mpctx)
 }
 
 // Update the A/V sync difference when a new video frame is being shown.
+//显示新视频帧时更新A/V同步差异。
 static void update_av_diff(struct MPContext *mpctx, double offset)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -933,6 +945,7 @@ static void schedule_frame(struct MPContext *mpctx, struct vo_frame *frame)
 }
 
 // Determine the mpctx->past_frames[0] frame duration.
+//帧持续时间
 static void calculate_frame_duration(struct MPContext *mpctx)
 {
     struct vo_chain *vo_c = mpctx->vo_chain;
@@ -954,6 +967,8 @@ static void calculate_frame_duration(struct MPContext *mpctx)
     // These formats usually round on 1ms. Some muxers do this incorrectly,
     // and might go off by 1ms more, and compensate for it later by an equal
     // rounding error into the opposite direction.
+    //下面的代码试图通过“unrounding”帧持续时间来补偿取整的Matroska时间戳，或者如果不可能，则近似他们。
+    //这些格式通常在1毫秒内舍入。有些muxers不正确地这样做，而且可能会多转1毫秒，然后用相等的舍入误差向相反方向进行补偿。
     double tolerance = 0.001 * 3 + 0.0001;
 
     double total = 0;
@@ -972,6 +987,7 @@ static void calculate_frame_duration(struct MPContext *mpctx)
     if (demux_duration > 0) {
         // Note that even if each timestamp is within rounding tolerance, it
         // could literally not add up (e.g. if demuxer FPS is rounded itself).
+        //请注意，即使每个时间戳都在舍入公差范围内，它也不能逐字相加（例如，如果demuxer FPS本身被舍入）。
         if (fabs(duration - demux_duration) < tolerance &&
             fabs(total - demux_duration * num_dur) < tolerance &&
             (num_dur >= 16 || num_dur >= mpctx->num_past_frames - 4))
@@ -1015,10 +1031,11 @@ void write_video(struct MPContext *mpctx)
     if (r < 0)
         goto error;
 
-    if (r == VD_WAIT) // Demuxer will wake us up for more packets to decode.
+    if (r == VD_WAIT) // Demuxer will wake us up for more packets to decode.Demuxer会唤醒我们让更多的数据包解码。
         return;
 
     if (r == VD_EOF) {
+        //硬解码检查
         if (check_for_hwdec_fallback(mpctx))
             return;
         if (vo_c->filter->failed_output_conversion)
@@ -1068,7 +1085,7 @@ void write_video(struct MPContext *mpctx)
         mpctx->video_status = STATUS_PLAYING;
 
     if (r != VD_NEW_FRAME) {
-        mp_wakeup_core(mpctx); // Decode more in next iteration.
+        mp_wakeup_core(mpctx); // Decode more in next iteration.在下一个迭代中解码更多
         return;
     }
 
@@ -1118,6 +1135,7 @@ void write_video(struct MPContext *mpctx)
     // wait until VO wakes us up to get more frames
     // (NB: in theory, the 1st frame after display sync mode change uses the
     //      wrong waiting mode)
+    //（注意：理论上，显示同步模式更改后的第1帧使用错误的等待模式）
     if (!vo_is_ready_for_frame(vo, mpctx->display_sync_active ? -1 : pts))
         return;
 
@@ -1182,6 +1200,7 @@ void write_video(struct MPContext *mpctx)
     if (mpctx->video_status < STATUS_PLAYING) {
         mpctx->video_status = STATUS_READY;
         // After a seek, make sure to wait until the first frame is visible.
+        //seek之后，请确保等到第一帧可见。
         if (!opts->video_latency_hacks) {
             vo_wait_frame(vo);
             MP_VERBOSE(mpctx, "first video frame after restart shown\n");
