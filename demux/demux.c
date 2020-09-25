@@ -62,6 +62,8 @@ extern const demuxer_desc_t demuxer_desc_timeline;
 /* Please do not add any new demuxers here. If you want to implement a new
  * demuxer, add it to libavformat, except for wrappers around external
  * libraries and demuxers requiring binary support. */
+/*请不要在这里添加任何新的异议。如果你想实现一个新的
+demuxer，将其添加到libavformat中，但外部库的包装器和需要二进制支持的demuxer除外。*/
 
 const demuxer_desc_t *const demuxer_list[] = {
     &demuxer_desc_disc,
@@ -126,11 +128,14 @@ struct demux_internal {
 
     // The demuxer runs potentially in another thread, so we keep two demuxer
     // structs; the real demuxer can access the shadow struct only.
+    //demuxer可能在另一个线程中运行，因此我们保留两个demuxer结构；真正的demuxer只能访问shadow结构。
+
     struct demuxer *d_thread;   // accessed by demuxer impl. (producer)
     struct demuxer *d_user;     // accessed by player (consumer)
 
     // The lock protects the packet queues (struct demux_stream),
     // and the fields below.
+    //锁保护数据包队列（struct demux_stream）和下面的字段。
     pthread_mutex_t lock;
     pthread_cond_t wakeup;
     pthread_t thread;
@@ -150,6 +155,8 @@ struct demux_internal {
     // (i.e. not a subtitle stream). This is needed because due to variable
     // interleaving multiple streams won't agree whether timed metadata is in
     // effect yet at the same time position.
+    //如果非空，则为一个用于全局（定时）元数据的选定流。它将是一个不稀疏的任意流（即不是字幕流）。
+    //这是必要的，因为由于变量交错，多个流将不一致于定时元数据是否在同一时间位置生效。
     struct demux_stream *master_stream;
 
     int events;
@@ -166,11 +173,15 @@ struct demux_internal {
 
     // At least one decoder actually requested data since init or the last seek.
     // Do this to allow the decoder thread to select streams before starting.
+    //至少有一个解码器在初始化或上一次寻道后实际请求了数据。
+    //执行此操作以允许解码器线程在启动之前选择流。
     bool reading;
 
     // Set if we know that we are at the start of the file. This is used to
     // avoid a redundant initial seek after enabling streams. We could just
     // allow it, but to avoid buggy seeking affecting normal playback, we don't.
+    //如果我们知道我们在文件的开头就设置。这用于避免启用流后的冗余初始查找。
+    //我们可以允许这样做，但是为了避免buggy seeking影响正常播放，我们不允许。
     bool initial_state;
 
     bool tracks_switched;       // thread needs to inform demuxer of this
@@ -216,6 +227,8 @@ struct demux_internal {
 
 // A continuous range of cached packets for all enabled streams.
 // (One demux_queue for each known stream.)
+//所有已启用流的缓存数据包的连续范围。
+//（每个已知流有一个demux_队列。）
 struct demux_cached_range {
     // streams[] is indexed by demux_stream->index
     struct demux_queue **streams;
@@ -234,6 +247,7 @@ struct demux_cached_range {
 // A continuous list of cached packets for a single stream/range. There is one
 // for each stream and range. Also contains some state for use during demuxing
 // (keeping it across seeks makes it easier to resume demuxing).
+//单个流/范围的缓存数据包的连续列表。每个流和范围都有一个。还包含一些在解组期间使用的状态（将其保持在seek之间使其更容易恢复分接）。
 struct demux_queue {
     struct demux_stream *ds;
     struct demux_cached_range *range;
@@ -320,6 +334,7 @@ struct demux_stream {
 };
 
 // "Snapshot" of the tag state. Refcounted to avoid a copy per packet.
+//标记状态的“快照”。引用以避免每个数据包有一个副本。
 struct mp_packet_tags {
     mp_atomic_int64 refcount;
     struct mp_tags *demux;      // demuxer global tags (normal thing)
@@ -673,6 +688,8 @@ static void ds_clear_reader_state(struct demux_stream *ds)
 // Call if the observed reader state on this stream somehow changes. The wakeup
 // is skipped if the reader successfully read a packet, because that means we
 // expect it to come back and ask for more.
+//如果此流上观察到的读卡器状态发生某种变化，则调用。
+//如果读卡器成功读取数据包，则会跳过唤醒，因为这意味着我们希望它返回并请求更多。
 static void wakeup_ds(struct demux_stream *ds)
 {
     if (ds->need_wakeup) {
@@ -779,6 +796,8 @@ static void add_missing_streams(struct demux_internal *in,
 // Allocate a new sh_stream of the given type. It either has to be released
 // with talloc_free(), or added to a demuxer with demux_add_sh_stream(). You
 // cannot add or read packets from the stream before it has been added.
+//分配一个给定类型的新shu流。必须使用talloc_free（）释放它，
+//或者使用demux_add_sh_stream（）将其添加到demuxer中。在添加流之前，不能添加或读取流中的数据包。
 struct sh_stream *demux_alloc_sh_stream(enum stream_type type)
 {
     struct sh_stream *sh = talloc_ptrtype(NULL, sh);
@@ -805,6 +824,7 @@ static void ds_destroy(void *ptr)
 // Add a new sh_stream to the demuxer. Note that as soon as the stream has been
 // added, it must be immutable, and must not be released (this will happen when
 // the demuxer is destroyed).
+//向demuxer添加新的sh_stream。请注意，一旦流被添加，它就必须是不可变的，并且不能被释放（当demuxer被销毁时会发生这种情况）。
 static void demux_add_sh_stream_locked(struct demux_internal *in,
                                        struct sh_stream *sh)
 {
@@ -879,6 +899,8 @@ static void ds_modify_demux_tags(struct demux_stream *ds)
 // which means the demuxer thread cannot write or read it directly.)
 // Before init is finished, sh->tags can still be accessed freely.
 // Ownership of tags goes to the function.
+//更新sh->tags（延迟）。这必须由demuxers调用，后者在init之后更新流标记。
+//（sh->tags可以被回放线程访问，这意味着demuxer线程不能直接读写）在init完成之前，sh->tags仍然可以自由访问。标记的所有权属于函数。
 void demux_set_stream_tags(struct demuxer *demuxer, struct sh_stream *sh,
                            struct mp_tags *tags)
 {
@@ -900,6 +922,8 @@ void demux_set_stream_tags(struct demuxer *demuxer, struct sh_stream *sh,
 // the lifetime of the demuxer, it is guaranteed that an index within the valid
 // range [0, demux_get_num_stream()) always returns a valid sh_stream pointer,
 // which will be valid until the demuxer is destroyed.
+//返回具有给定索引的流。由于流只能在demuxer的生存期内添加，因此可以保证有效范围[0，demux_get_num_stream（））
+//内的索引始终返回有效的sh_stream指针，该指针将在demuxer被销毁之前有效。
 struct sh_stream *demux_get_stream(struct demuxer *demuxer, int index)
 {
     struct demux_internal *in = demuxer->in;
@@ -1039,6 +1063,7 @@ void demuxer_feed_caption(struct sh_stream *stream, demux_packet_t *dp)
 }
 
 // Add the keyframe to the end of the index. Not all packets are actually added.
+//将关键帧添加到索引的末尾。并不是所有的数据包都是实际添加的。
 static void add_index_entry(struct demux_queue *queue, struct demux_packet *dp)
 {
     assert(dp->keyframe && dp->kf_seek_pts != MP_NOPTS_VALUE);
@@ -1061,6 +1086,7 @@ static void add_index_entry(struct demux_queue *queue, struct demux_packet *dp)
 
 // Check whether the next range in the list is, and if it appears to overlap,
 // try joining it into a single range.
+//检查列表中的下一个区域是否是，如果它看起来重叠，请尝试将其合并到单个区域中。
 static void attempt_range_joining(struct demux_internal *in)
 {
     struct demux_cached_range *next = NULL;
@@ -1231,6 +1257,9 @@ failed:
 // This has to deal with a number of corner cases, such as demuxers potentially
 // starting output at non-keyframes.
 // Can join seek ranges, which messes with in->current_range and all.
+//确定添加数据包时的可查找范围。如果dp==NULL，则将其视为EOF（即关闭当前块）。
+//这需要处理大量的角点情况，例如可能在非关键帧处开始输出的解复用器。
+//可以加入seek ranges，这会扰乱in->current_range和all
 static void adjust_seek_range_on_packet(struct demux_stream *ds,
                                         struct demux_packet *dp)
 {
@@ -1623,6 +1652,7 @@ static void execute_seek(struct demux_internal *in)
 }
 
 // Make demuxing progress. Return whether progress was made.
+//取得进展。返回是否有进展。
 static bool thread_work(struct demux_internal *in)
 {
     if (in->run_fn) {
@@ -1752,6 +1782,7 @@ static struct demux_packet *dequeue_packet(struct demux_stream *ds)
 // Read a packet from the given stream. The returned packet belongs to the
 // caller, who has to free it with talloc_free(). Might block. Returns NULL
 // on EOF.
+//从给定流中读取数据包。返回的包属于调用者，调用者必须使用talloc_free（）将其释放。可能会阻塞。在EOF上返回NULL。
 struct demux_packet *demux_read_packet(struct sh_stream *sh)
 {
     struct demux_stream *ds = sh ? sh->ds : NULL;
@@ -1789,6 +1820,8 @@ struct demux_packet *demux_read_packet(struct sh_stream *sh)
 // least one packet, call the wakeup callback.
 // Unlike demux_read_packet(), this always enables readahead (except for
 // interleaved subtitles).
+//轮询demuxer队列，如果有数据包，则返回它。否则，只需让demuxer线程读取该流的数据包，如果至少有一个包，则调用wakeup回调。
+//与demux_read_packet（）不同，它始终启用readahead（交错字幕除外）
 // Returns:
 //   < 0: EOF was reached, *out_pkt=NULL
 //  == 0: no new packet yet, but maybe later, *out_pkt=NULL
@@ -2008,6 +2041,8 @@ static void demux_copy(struct demuxer *dst, struct demuxer *src)
 
 // This is called by demuxer implementations if demuxer->metadata changed.
 // (It will be propagated to the user as timed metadata.)
+//如果demuxer->metadata更改，则demuxer实现将调用此函数。
+//（它将作为定时元数据传播给用户。）
 void demux_metadata_changed(demuxer_t *demuxer)
 {
     assert(demuxer == demuxer->in->d_thread); // call from demuxer impl. only
@@ -2068,6 +2103,7 @@ static void update_final_metadata(demuxer_t *demuxer)
 
 // Called by the user thread (i.e. player) to update metadata and other things
 // from the demuxer thread.
+//由用户线程（即player）调用以更新demuxer线程中的元数据和其他内容。
 void demux_update(demuxer_t *demuxer)
 {
     assert(demuxer == demuxer->in->d_user);
@@ -2152,6 +2188,7 @@ static void demux_init_ccs(struct demuxer *demuxer, struct demux_opts *opts)
 // Each stream contains a copy of the global demuxer metadata, but this might
 // be outdated if a stream gets added and then metadata does get set during
 // early init.
+//每个流都包含一个全局demuxer元数据的副本，但是如果添加了一个流，然后在早期初始化期间设置了元数据，那么这可能就过时了。
 static void fixup_metadata(struct demux_internal *in)
 {
     for (int n = 0; n < in->num_streams; n++) {
@@ -2341,6 +2378,7 @@ done:
     return demuxer;
 }
 
+//打开url
 // Convenience function: open the stream, enable the cache (according to params
 // and global opts.), open the demuxer.
 // (use free_demuxer_and_stream() to free the underlying stream too)
@@ -2509,6 +2547,7 @@ static struct demux_cached_range *find_cache_seek_target(struct demux_internal *
 // must be called locked
 // range must be non-NULL and from find_cache_seek_target() using the same pts
 // and flags, before any other changes to the cached state
+//在对缓存状态进行任何其他更改之前，range必须为非NULL，并且必须使用相同的pts和标志从find_cache_seek_target（）开始
 static void execute_cache_seek(struct demux_internal *in,
                                struct demux_cached_range *range,
                                double pts, int flags)
@@ -2520,6 +2559,9 @@ static void execute_cache_seek(struct demux_internal *in,
     // target will make the audio seek to the video target or before.
     // (If hr-seeks are used, it's better to skip this, as it would only mean
     // that more audio data than necessary would have to be decoded.)
+    //将搜索目标调整到找到的视频关键帧。否则，视频将低于搜索目标，而音频将更接近它。
+    //播放机前端将播放没有音频的附加视频，因此您将获得“未命中”量的静音音频。
+    //调整搜索目标将使音频搜索到视频目标或之前。（如果使用hr寻道，最好跳过这一步，因为这只会意味着需要解码更多的音频数据。）
     if (!(flags & SEEK_HR)) {
         for (int n = 0; n < in->num_streams; n++) {
             struct demux_stream *ds = in->streams[n]->ds;
@@ -2567,6 +2609,7 @@ static void execute_cache_seek(struct demux_internal *in,
 
     // If we seek to another range, we want to seek the low level demuxer to
     // there as well, because reader and demuxer queue must be the same.
+    //如果我们寻找另一个范围，我们也要在那里寻找低层的demuxer，因为reader和demuxer queue必须相同。
     if (in->current_range != range) {
         switch_current_range(in, range);
 
@@ -2578,6 +2621,8 @@ static void execute_cache_seek(struct demux_internal *in,
         // range due to demuxer seek imprecisions, or because the queue contains
         // packets past the seek target but before the next seek target. Don't
         // append them twice, instead skip them until new packets are found.
+        //当附加新的数据包时，由于demuxer seek不精确，或者因为队列包含的数据包超过了seek目标，
+        //但在下一个seek目标之前，它们可能与旧范围重叠。不要附加它们两次，而是跳过它们直到找到新的数据包
         for (int n = 0; n < in->num_streams; n++) {
             struct demux_stream *ds = in->streams[n]->ds;
 
@@ -2590,6 +2635,7 @@ static void execute_cache_seek(struct demux_internal *in,
 
 // Create a new blank cache range, and backup the old one. If the seekable
 // demuxer cache is disabled, merely reset the current range to a blank state.
+//创建一个新的空白缓存范围，并备份旧的。如果seekable demuxer缓存被禁用，只需将当前范围重置为空白状态。
 static void switch_to_fresh_cache_range(struct demux_internal *in)
 {
     if (!in->seekable_cache) {
@@ -2690,6 +2736,8 @@ struct sh_stream *demuxer_stream_by_demuxer_id(struct demuxer *d,
 // current position
 // On a switch, it seeks back, and then grabs all packets that were
 // "missing" from the packet queue of the newly selected stream.
+//一种模糊的机制，通过使流从当前位置返回数据包来“更快”地执行流交换（如用户所感知的）
+//在交换机上，它查找，然后从新选择的流的数据包队列中获取“丢失”的所有数据包。
 static void initiate_refresh_seek(struct demux_internal *in,
                                   struct demux_stream *stream,
                                   double start_ts)
@@ -2765,6 +2813,8 @@ static void initiate_refresh_seek(struct demux_internal *in,
 // Set whether the given stream should return packets.
 // ref_pts is used only if the stream is enabled. Then it serves as approximate
 // start pts for this stream (in the worst case it is ignored).
+//设置给定流是否应返回数据包。
+//ref_pts仅在流启用时使用。然后它作为该流的近似起始点（在最坏的情况下，它被忽略）。
 void demuxer_select_track(struct demuxer *demuxer, struct sh_stream *stream,
                           double ref_pts, bool selected)
 {
@@ -2798,6 +2848,7 @@ void demux_set_stream_autoselect(struct demuxer *demuxer, bool autoselect)
 // logical state, while this function returns the actual state (in case the
 // demuxer attempts to cache even unselected packets for track switching - this
 // will potentially be done in the future).
+//这仅用于demuxer实现。demuxer_select_track（）设置逻辑状态，而此函数返回实际状态（如果demuxer试图缓存甚至未选定的数据包以进行跟踪切换-这可能在将来完成）
 bool demux_stream_is_selected(struct sh_stream *stream)
 {
     if (!stream)
@@ -2888,6 +2939,7 @@ void demux_disable_cache(demuxer_t *demuxer)
 
 // Disallow reading any packets and make readers think there is no new data
 // yet, until a seek is issued.
+//在发出seek之前，禁止读取任何数据包并使读卡器认为没有新数据。
 void demux_block_reading(struct demuxer *demuxer, bool block)
 {
     struct demux_internal *in = demuxer->in;

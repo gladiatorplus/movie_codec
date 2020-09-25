@@ -393,6 +393,7 @@ static void extra_output_conversion(struct mp_aframe *mpa)
 }
 
 // This relies on the tricky way mpa was allocated.
+//这取决于mpa的分配方式。
 static bool reorder_planes(struct mp_aframe *mpa, int *reorder,
                            struct mp_chmap *newmap)
 {
@@ -435,6 +436,8 @@ static int resample_frame(struct AVAudioResampleContext *r,
     // Be aware that the channel layout and count can be different for in and
     // out frames. In some situations the caller will fix up the frames before
     // or after conversion. The sample rates can also be different.
+    //请注意，对于输入帧和输出帧，通道布局和计数可能不同。
+    //在某些情况下，调用者会在转换之前或之后修复帧。采样率也可能不同。
     AVFrame *av_i = in ? mp_aframe_get_raw_avframe(in) : NULL;
     AVFrame *av_o = out ? mp_aframe_get_raw_avframe(out) : NULL;
     return avresample_convert(r,

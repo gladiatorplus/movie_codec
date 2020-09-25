@@ -48,6 +48,8 @@ enum {
 
 // Try to reuse the existing filters to change playback speed. If it works,
 // return true; if filter recreation is needed, return false.
+//尝试重用现有的过滤器来更改播放速度。如果有效的话，
+//返回true；如果需要重新创建过滤器，则返回false。
 static void update_speed_filters(struct MPContext *mpctx)
 {
     struct ao_chain *ao_c = mpctx->ao_chain;
@@ -151,6 +153,7 @@ static float compute_replaygain(struct MPContext *mpctx)
 }
 
 // Called when opts->softvol_volume or opts->softvol_mute were changed.
+//音量
 void audio_update_volume(struct MPContext *mpctx)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -168,6 +171,7 @@ void audio_update_volume(struct MPContext *mpctx)
 }
 
 // Call this if opts->playback_speed or mpctx->speed_factor_* change.
+//播放速度
 void update_playback_speed(struct MPContext *mpctx)
 {
     mpctx->audio_speed = mpctx->opts->playback_speed * mpctx->speed_factor_a;
@@ -256,6 +260,7 @@ static char *audio_config_to_str_buf(char *buf, size_t buf_sz, int rate,
 }
 
 // Decide whether on a format change, we should reinit the AO.
+//决定是否要更改格式，我们应该重新输入AO。
 static bool keep_weak_gapless_format(struct mp_aframe *old, struct mp_aframe* new)
 {
     bool res = false;
@@ -316,6 +321,8 @@ static void reinit_audio_filters_and_output(struct MPContext *mpctx)
     // Weak gapless audio: if the filter output format is the same as the
     // previous one, keep the AO and don't reinit anything.
     // Strong gapless: always keep the AO
+    //弱无间隙音频：如果过滤器输出格式与前一个相同，请保留AO，不要限制任何内容。
+    //坚强无间隙：始终保持AO
     if ((mpctx->ao_filter_fmt && mpctx->ao && opts->gapless_audio < 0 &&
          keep_weak_gapless_format(mpctx->ao_filter_fmt, out_fmt)) ||
         (mpctx->ao && opts->gapless_audio > 0))
@@ -427,6 +434,7 @@ init_error:
     error_on_track(mpctx, track);
 }
 
+//音频解码
 int init_audio_decoder(struct MPContext *mpctx, struct track *track)
 {
     assert(!track->dec);
@@ -517,6 +525,7 @@ init_error:
 
 // Return pts value corresponding to the end point of audio written to the
 // ao so far.
+//返回到目前为止写入ao的音频结束点对应的pts值。
 double written_audio_pts(struct MPContext *mpctx)
 {
     struct ao_chain *ao_c = mpctx->ao_chain;
@@ -531,12 +540,15 @@ double written_audio_pts(struct MPContext *mpctx)
     // Data that was ready for ao but was buffered because ao didn't fully
     // accept everything to internal buffers yet. This also does not correctly
     // track playback speed, so we use the current speed.
+    //为ao准备好，但由于ao尚未完全接受内部缓冲区的所有内容而被缓冲的数据。
+    //这也不能正确跟踪播放速度，所以我们使用当前速度。
     a_pts -= mp_audio_buffer_seconds(ao_c->ao_buffer) * mpctx->audio_speed;
 
     return a_pts;
 }
 
 // Return pts value corresponding to currently playing audio.
+//返回当前播放的音频对应的pts值。
 double playing_audio_pts(struct MPContext *mpctx)
 {
     double pts = written_audio_pts(mpctx);
@@ -592,6 +604,8 @@ static void dump_audio_stats(struct MPContext *mpctx)
 // Return the number of samples that must be skipped or prepended to reach the
 // target audio pts after a seek (for A/V sync or hr-seek).
 // Return value (*skip):
+//传回在搜寻（a/V同步或hr搜寻）后，必须略过或预先设定才能到达目标音频点的样本数。
+//返回值（*skip）:
 //   >0: skip this many samples
 //   =0: don't do anything
 //   <0: prepend this many samples of silence
@@ -762,6 +776,8 @@ void reload_audio_output(struct MPContext *mpctx)
     // Whether we can use spdif might have changed. If we failed to use spdif
     // in the previous initialization, try it with spdif again (we'll fallback
     // to PCM again if necessary).
+    //我们是否可以使用spdif可能已经改变了。
+    //如果在之前的初始化中未能使用spdif，请再次尝试使用spdif（如有必要，我们将再次回退到PCM）。
     if (ao_c && ao_c->track) {
         struct mp_decoder_wrapper *dec = ao_c->track->dec;
         if (dec && ao_c->spdif_failed) {
@@ -777,7 +793,7 @@ void reload_audio_output(struct MPContext *mpctx)
 
     mp_wakeup_core(mpctx);
 }
-
+//音频buffer
 void fill_audio_out_buffers(struct MPContext *mpctx)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -803,6 +819,7 @@ void fill_audio_out_buffers(struct MPContext *mpctx)
 
     // (if AO is set due to gapless from previous file, then we can try to
     // filter normally until the filter tells us to change the AO)
+    //（如果由于上一个文件的无间隙而设置了AO，那么我们可以尝试正常过滤，直到过滤器告诉我们更改AO为止）
     if (!mpctx->ao) {
         // Probe the initial audio format.
         mp_pin_out_request_data(ao_c->filter->f->pins[1]);
@@ -947,6 +964,7 @@ void fill_audio_out_buffers(struct MPContext *mpctx)
 
     // We already have as much data as the audio device wants, and can start
     // writing it any time.
+    //我们已经有了音频设备想要的数据，并且可以随时开始写入。
     if (mpctx->audio_status == STATUS_FILLING)
         mpctx->audio_status = STATUS_READY;
 

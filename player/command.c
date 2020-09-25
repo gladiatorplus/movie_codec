@@ -6143,7 +6143,7 @@ void handle_command_updates(struct MPContext *mpctx)
 
     // This is a bit messy: ao_hotplug wakes up the player, and then we have
     // to recheck the state. Then the client(s) will read the property.
-    //这有点混乱：ao热插拔唤醒了玩家，然后我们要重新检查状态。然后客户端将读取属性
+    //这有点混乱：ao热插拔唤醒了player，然后我们要重新检查状态。然后客户端将读取属性
     if (ctx->hotplug && ao_hotplug_check_update(ctx->hotplug))
         mp_notify_property(mpctx, "audio-device-list");
 }

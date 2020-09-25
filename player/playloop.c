@@ -68,6 +68,8 @@ void mp_wait_events(struct MPContext *mpctx)
 // Set the timeout used when the playloop goes to sleep. This means the
 // playloop will re-run as soon as the timeout elapses (or earlier).
 // mp_set_timeout(c, 0) is essentially equivalent to mp_wakeup_core(c).
+//设置播放循环进入休眠状态时使用的超时。这意味着一旦超时（或更早），playloop将重新运行。
+//mp_set_timeout（c，0）本质上等同于mp_wakeup_core（c）。
 void mp_set_timeout(struct MPContext *mpctx, double sleeptime)
 {
     if (mpctx->sleeptime > sleeptime) {
@@ -598,6 +600,7 @@ static void handle_osd_redraw(struct MPContext *mpctx)
         return;
     // If we're playing normally, let OSD be redrawn naturally as part of
     // video display.
+    //如果我们正常播放，让OSD作为视频显示的一部分自然重画。
     if (!mpctx->paused) {
         if (mpctx->sleeptime < 0.1 && mpctx->video_status == STATUS_PLAYING)
             return;
@@ -638,6 +641,7 @@ static void handle_pause_on_low_cache(struct MPContext *mpctx)
         // Audio or video is restarting, and initial buffering is enabled. Make
         // sure we actually restart them in paused mode, so no audio gets
         // dropped and video technically doesn't start yet.
+        //音频或视频正在重新启动，并且已启用初始缓冲。确保我们在暂停模式下重新启动它们，这样就不会有音频丢失，视频技术上也不会启动。
         use_pause_on_low_cache &= opts->cache_pause_initial &&
                                     (mpctx->video_status == STATUS_READY ||
                                      mpctx->audio_status == STATUS_READY);
@@ -1082,11 +1086,13 @@ static void handle_eof(struct MPContext *mpctx)
     /* Don't quit while paused and we're displaying the last video frame. On the
      * other hand, if we don't have a video frame, then the user probably seeked
      * outside of the video, and we do want to quit. */
+    /*暂停时不要退出，我们正在显示最后一个视频帧。另一方面，如果我们没有视频帧，那么用户可能在视频外部搜索，我们确实想退出。*/
     bool prevent_eof =
         mpctx->paused && mpctx->video_out && vo_has_frame(mpctx->video_out);
     /* It's possible for the user to simultaneously switch both audio
      * and video streams to "disabled" at runtime. Handle this by waiting
      * rather than immediately stopping playback due to EOF.
+     * /*用户可以在运行时同时将音频和视频流切换为“禁用”。而不是立即停止播放。
      */
     if ((mpctx->ao_chain || mpctx->vo_chain) && !prevent_eof &&
         mpctx->audio_status == STATUS_EOF &&
@@ -1148,8 +1154,10 @@ void run_playloop(struct MPContext *mpctx)
         mp_wakeup_core(mpctx);
     mp_wait_events(mpctx);
 
+    //暂停处理
     handle_pause_on_low_cache(mpctx);
 
+    //命令行 输入处理
     mp_process_input(mpctx);
 
     handle_chapter_change(mpctx);

@@ -334,6 +334,7 @@ error:
     return NULL;
 }
 
+//vo init
 struct vo *init_best_video_out(struct mpv_global *global, struct vo_extra *ex)
 {
     struct m_obj_settings *vo_list = global->opts->vo->video_driver_list;

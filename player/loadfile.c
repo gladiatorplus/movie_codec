@@ -60,6 +60,7 @@
 #include "libmpv/client.h"
 
 // Called by foreign threads when playback should be stopped and such.
+//当播放应该停止时由外部线程调用。
 void mp_abort_playback_async(struct MPContext *mpctx)
 {
     mp_cancel_trigger(mpctx->playback_abort);
@@ -222,6 +223,7 @@ void update_demuxer_properties(struct MPContext *mpctx)
 
 // Enables or disables the stream for the given track, according to
 // track->selected.
+//根据track->selected启用或禁用给定轨迹的流。
 void reselect_demux_stream(struct MPContext *mpctx, struct track *track)
 {
     if (!track->stream)
@@ -235,6 +237,7 @@ void reselect_demux_stream(struct MPContext *mpctx, struct track *track)
 }
 
 // Called from the demuxer thread if a new packet is available.
+//如果有新数据包可用，则从demuxer线程调用。
 static void wakeup_demux(void *pctx)
 {
     struct MPContext *mpctx = pctx;
@@ -411,6 +414,7 @@ static char *track_layout_hash(struct MPContext *mpctx)
 
 // Normally, video/audio/sub track selection is persistent across files. This
 // code resets track selection if the new file has a different track layout.
+//通常，视频/音频/子音轨选择在文件间持久化。如果选择了不同的音轨布局代码，则重置该音轨布局。
 static void check_previous_track_selection(struct MPContext *mpctx)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -578,6 +582,7 @@ bool mp_remove_track(struct MPContext *mpctx, struct track *track)
 
 // Add the given file as additional track. The filter argument controls how or
 // if tracks are auto-selected at any point.
+//添加给定的文件作为附加曲目。filter参数控制如何或是否在任何点自动选择轨迹。
 int mp_add_external_file(struct MPContext *mpctx, char *filename,
                          enum stream_type filter)
 {
@@ -734,7 +739,7 @@ void prepare_playlist(struct MPContext *mpctx, struct playlist *pl)
 
 // Replace the current playlist entry with playlist contents. Moves the entries
 // from the given playlist pl, so the entries don't actually need to be copied.
-////将当前播放列表项替换为播放列表内容。从给定的播放列表pl中移动条目，因此实际上不需要复制条目。
+//将当前播放列表项替换为播放列表内容。从给定的播放列表pl中移动条目，因此实际上不需要复制条目。
 static void transfer_playlist(struct MPContext *mpctx, struct playlist *pl)
 {
     if (pl->first) {
@@ -851,6 +856,7 @@ static void cancel_open(struct MPContext *mpctx)
 }
 
 // Setup all the field to open this url, and make sure a thread is running.
+//设置所有字段以打开此url，并确保线程正在运行。
 static void start_open(struct MPContext *mpctx, char *url, int url_flags)
 {
     cancel_open(mpctx);
@@ -944,6 +950,8 @@ void prefetch_next(struct MPContext *mpctx)
 // Destroy the complex filter, and remove the references to the filter pads.
 // (Call cleanup_deassociated_complex_filters() to close decoders/VO/AO
 // that are not connected anymore due to this.)
+//销毁复杂的过滤器，并删除对过滤器垫的引用。
+//（调用cleanup_deassociated_complex_filters（），关闭因此不再连接的解码器/VO/AO。）
 static void deassociate_complex_filters(struct MPContext *mpctx)
 {
     for (int n = 0; n < mpctx->num_tracks; n++)
@@ -958,6 +966,7 @@ static void deassociate_complex_filters(struct MPContext *mpctx)
 
 // Close all decoders and sinks (AO/VO) that are not connected to either
 // a track or a filter pad.
+//关闭所有未连接到音轨或滤波器垫的解码器和接收器（AO/VO）。
 static void cleanup_deassociated_complex_filters(struct MPContext *mpctx)
 {
     for (int n = 0; n < mpctx->num_tracks; n++) {
@@ -1010,6 +1019,8 @@ static int reinit_complex_filters(struct MPContext *mpctx, bool force_uninit)
     // Later, we either reassociate them with new pads, or uninit them if
     // they are still dangling. This avoids too interruptive actions like
     // recreating the VO.
+    //断开旧的过滤垫。我们将源（tracks）和sink（AO/VO）“挂起”，既不连接到track也不连接到filter pad。
+    //稍后，我们要么将它们与新的pad重新关联，要么取消它们的关联（如果它们仍然悬空）。这避免了像重新创建VO这样的过于中断的操作。
     deassociate_complex_filters(mpctx);
 
     bool success = false;
@@ -1098,6 +1109,7 @@ static int reinit_complex_filters(struct MPContext *mpctx, bool force_uninit)
 
     // Don't allow unconnected pins. Libavfilter would make the data flow a
     // real pain anyway.
+    //不允许未连接的针脚。无论如何，Libavfilter会让数据流变得非常痛苦。
     for (int n = 0; n < mpctx->lavfi->num_pins; n++) {
         struct mp_pin *pin = mpctx->lavfi->pins[n];
         if (!mp_pin_is_connected(pin)) {
@@ -1135,6 +1147,8 @@ void update_lavfi_complex(struct MPContext *mpctx)
 
 // Start playing the current playlist entry.
 // Handle initialization and deinitialization.
+//开始播放当前播放列表项。
+//处理初始化和取消初始化。
 static void play_current_file(struct MPContext *mpctx)
 {
     struct MPOpts *opts = mpctx->opts;
@@ -1249,6 +1263,7 @@ static void play_current_file(struct MPContext *mpctx)
 
     if (mpctx->opts->rebase_start_time)
         demux_set_ts_offset(mpctx->demuxer, -mpctx->demuxer->start_time);
+    //demux 线程
     enable_demux_thread(mpctx, mpctx->demuxer);
 
     load_chapters(mpctx);
@@ -1464,6 +1479,7 @@ terminate_playback:
 
 // Determine the next file to play. Note that if this function returns non-NULL,
 // it can have side-effects and mutate mpctx.
+//确定要播放的下一个文件。请注意，如果此函数返回非NULL，则可能会产生副作用并使mpctx发生变化。
 //  direction: -1 (previous) or +1 (next)
 //  force: if true, don't skip playlist entries marked as failed
 //  mutate: if true, change loop counters
