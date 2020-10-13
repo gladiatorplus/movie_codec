@@ -4030,7 +4030,7 @@ struct mp_image *gl_video_get_image(struct gl_video *p, int imgfmt, int w, int h
         gl_video_dr_free_buffer(p, ptr);
     return res;
 }
-
+//硬解码
 static void load_add_hwdec(struct gl_video *p, struct mp_hwdec_devices *devs,
                            const struct ra_hwdec_driver *drv, bool is_auto)
 {

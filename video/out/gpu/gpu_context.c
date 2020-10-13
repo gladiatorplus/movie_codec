@@ -158,6 +158,8 @@ int ra_ctx_validate_context(struct mp_log *log, const struct m_option *opt,
 
 // Create a VO window and create a RA context on it.
 //  vo_flags: passed to the backend's create window function
+//创建一个VO窗口并在其上创建RA上下文。
+//vo帴flags：传递到后端的create window函数
 struct ra_ctx *ra_ctx_create(struct vo *vo, const char *context_type,
                              const char *context_name, struct ra_ctx_opts opts)
 {

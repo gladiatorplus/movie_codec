@@ -1431,6 +1431,7 @@ void demux_add_packet(struct sh_stream *stream, demux_packet_t *dp)
 }
 
 // Returns true if there was "progress" (lock was released temporarily).
+//packet 开始
 static bool read_packet(struct demux_internal *in)
 {
     in->eof = false;
@@ -2328,6 +2329,7 @@ static const int d_request[] = {DEMUX_CHECK_REQUEST, -1};
 static const int d_force[]   = {DEMUX_CHECK_FORCE, -1};
 
 // params can be NULL
+//demux开始
 struct demuxer *demux_open(struct stream *stream, struct demuxer_params *params,
                            struct mpv_global *global)
 {
@@ -2378,7 +2380,7 @@ done:
     return demuxer;
 }
 
-//打开url
+//打开url  demux 开始
 // Convenience function: open the stream, enable the cache (according to params
 // and global opts.), open the demuxer.
 // (use free_demuxer_and_stream() to free the underlying stream too)
