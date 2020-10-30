@@ -1529,6 +1529,9 @@ static void wait_until_mapped(struct vo *vo)
 
 // Create the X11 window. There is only 1, and it must be created before
 // vo_x11_config_vo_window() is called. vis can be NULL for default.
+// Create the X11 window. There is only 1, and it must be created before
+// vo_x11_config_vo_window() is called. vis can be NULL for default.
+//创建窗口
 bool vo_x11_create_vo_window(struct vo *vo, XVisualInfo *vis,
                              const char *classname)
 {

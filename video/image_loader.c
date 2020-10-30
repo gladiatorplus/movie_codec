@@ -7,7 +7,6 @@
 #include "image_loader.h"
 
 //avcodec_find_decoder   解码流程
-
 struct mp_image *load_image_png_buf(void *buffer, size_t buffer_size, int imgfmt)
 {
     const AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_PNG);

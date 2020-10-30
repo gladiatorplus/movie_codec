@@ -873,6 +873,7 @@ static void start_open(struct MPContext *mpctx, char *url, int url_flags)
     if (mpctx->opts->load_unsafe_playlists)
         mpctx->open_url_flags = 0;
 
+    //解封装线程
     if (pthread_create(&mpctx->open_thread, NULL, open_demux_thread, mpctx)) {
         cancel_open(mpctx);
         return;
